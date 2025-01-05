@@ -205,6 +205,7 @@ public class VirtualMachineCollector {
         GlobalMemory memory = systemInfo.getHardware().getMemory();
         server.setMemoryTotal(memory.getTotal());
         server.setMemoryUsed(memory.getTotal() - memory.getAvailable());
+        server.setMemoryActuallyUsed(server.getMemoryUsed());
         VirtualMemory virtualMemory = memory.getVirtualMemory();
         server.setSwapTotal(virtualMemory.getSwapTotal());
         server.setSwapUsed(virtualMemory.getSwapUsed());
