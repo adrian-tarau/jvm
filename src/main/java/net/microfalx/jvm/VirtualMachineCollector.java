@@ -35,6 +35,7 @@ public class VirtualMachineCollector {
     private final SystemInfo systemInfo = new SystemInfo();
 
     private static volatile long[][] prevTicks;
+    private boolean metadata;
 
     public VirtualMachineCollector(VirtualMachineMBeanServer machineMBeanServer) {
         ArgumentUtils.requireNonNull(machineMBeanServer);
@@ -48,14 +49,32 @@ public class VirtualMachineCollector {
             collectPid(vm);
             collectProcess(vm);
             collectServer(vm);
+            collectOs(vm);
             collectMemoryStats(vm);
             collectGarbageCollection(vm);
             collectBufferPools(vm);
             collectRuntimeInformation(vm);
             collectThreadInformation(vm);
-            collectThreadDumps(vm);
+            if (!metadata) collectThreadDumps(vm);
         }
         return vm;
+    }
+
+    public VirtualMachineCollector setMetadata(boolean metadata) {
+        this.metadata = metadata;
+        return this;
+    }
+
+    public Os getOs() {
+        VirtualMachine vm = new VirtualMachine();
+        collectOs(vm);
+        return vm.getOs();
+    }
+
+    public Server getServer() {
+        VirtualMachine vm = new VirtualMachine();
+        collectServer(vm);
+        return vm.getServer();
     }
 
     public void collectBufferPools(VirtualMachine virtualMachine) {
@@ -102,6 +121,8 @@ public class VirtualMachineCollector {
         runtimeInformation.setStartTime(runtimeMXBean.getStartTime());
         runtimeInformation.setUptime(runtimeMXBean.getUptime());
 
+        virtualMachine.setName(runtimeMXBean.getVmName() + " " + runtimeMXBean.getVmVersion());
+
         try {
             runtimeInformation.setCommittedVirtualMemorySize(machineMBeanServer.getLongAttr(OPERATING_SYSTEM_NAME, "CommittedVirtualMemorySize", 0L));
             runtimeInformation.setFreePhysicalMemorySize(machineMBeanServer.getLongAttr(OPERATING_SYSTEM_NAME, "FreePhysicalMemorySize", 0L));
@@ -146,6 +167,14 @@ public class VirtualMachineCollector {
         }
     }
 
+    private void collectOs(VirtualMachine virtualMachine) {
+        OperatingSystem operatingSystem = systemInfo.getOperatingSystem();
+        Os os = new Os();
+        os.setName(operatingSystem.getFamily());
+        os.setVersion(operatingSystem.getVersionInfo().toString());
+        virtualMachine.setOs(os);
+    }
+
     private void collectProcess(VirtualMachine virtualMachine) {
         if (!machineMBeanServer.isLocal()) return;
         Process process = new Process();
@@ -168,6 +197,7 @@ public class VirtualMachineCollector {
         extractMemory(server);
         extractNetwork(server);
         extractDisk(server);
+        extractMisc(server);
         virtualMachine.setServer(server);
     }
 
@@ -265,6 +295,7 @@ public class VirtualMachineCollector {
         server.setThreads(processor.getLogicalProcessorCount());
         server.setContainerThreads(-1);
         server.setLoad((float) processor.getSystemLoadAverage(1)[0]);
+        if (metadata) return;
         if (prevTicks != null) {
             double[] load = processor.getProcessorCpuLoadBetweenTicks(prevTicks);
             server.setCpuSystem(getTick(TickType.SYSTEM, load));

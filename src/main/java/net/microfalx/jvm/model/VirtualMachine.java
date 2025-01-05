@@ -1,6 +1,10 @@
 package net.microfalx.jvm.model;
 
 import lombok.Data;
+import net.microfalx.jvm.VirtualMachineCollector;
+import net.microfalx.jvm.VirtualMachineMBeanServer;
+import net.microfalx.lang.Descriptable;
+import net.microfalx.lang.Nameable;
 
 import java.io.Serial;
 import java.io.Serializable;
@@ -9,7 +13,7 @@ import java.util.Collection;
 import java.util.Collections;
 
 @Data
-public class VirtualMachine implements Serializable {
+public class VirtualMachine implements Nameable, Descriptable, Serializable {
 
     @Serial
     private static final long serialVersionUID = 2876115727942855023L;
@@ -24,11 +28,14 @@ public class VirtualMachine implements Serializable {
     private long nonHeapTotalMemory;
     private long nonHeapUsedMemory;
 
+    private String name;
+    private String description;
     private Collection<MemoryPool> memoryPools = Collections.emptyList();
     private Collection<BufferPool> bufferPools = Collections.emptyList();
     private Collection<GarbageCollection> garbageCollections = Collections.emptyList();
     private RuntimeInformation runtimeInformation;
     private ThreadInformation threadInformation;
+    private Os os;
     private Process process;
     private Server server;
 
@@ -37,6 +44,27 @@ public class VirtualMachine implements Serializable {
     private int gcExecuted;
 
     private ThreadDump threadDump;
+
+    /**
+     * Returns information about current JVM.
+     *
+     * @return a non-null instance
+     */
+    public static VirtualMachine get() {
+        return get(false);
+    }
+
+    /**
+     * Returns information about current JVM.
+     *
+     * @param metadata {@code true} to collect only metadata, {@code metadata} to collect full stats
+     * @return a non-null instance
+     */
+    public static VirtualMachine get(boolean metadata) {
+        VirtualMachineCollector collector = new VirtualMachineCollector(VirtualMachineMBeanServer.local())
+                .setMetadata(metadata);
+        return collector.execute();
+    }
 
     public float getHeapUsedMemoryPercent() {
         return heapTotalMemory == 0 ? 0 : 100 * ((float) heapUsedMemory / (float) heapTotalMemory);
