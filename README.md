@@ -1,2 +1,3 @@
-# jvm
-Low level interactions with Java VM
+# Java Virtual Machine
+
+Low level interactions with Java VM.
