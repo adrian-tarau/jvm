@@ -25,12 +25,12 @@
 
     <groupId>net.microfalx</groupId>
     <artifactId>jvm</artifactId>
-    <version>0.8.0-SNAPSHOT</version>
+    <version>0.8.1-SNAPSHOT</version>
 
     <parent>
         <groupId>net.microfalx</groupId>
         <artifactId>pom</artifactId>
-        <version>1.0.3</version>
+        <version>1.0.5</version>
     </parent>
 
     <name>Java VM Extensions</name>
@@ -58,9 +58,9 @@
     <properties>
         <java.version>11</java.version>
         <bom.version>1.0.5</bom.version>
-        <lang.version>0.8.0-SNAPSHOT</lang.version>
-        <resource.version>0.8.0-SNAPSHOT</resource.version>
-        <metrics.version>0.8.0-SNAPSHOT</metrics.version>
+        <lang.version>0.8.1-SNAPSHOT</lang.version>
+        <resource.version>0.8.1-SNAPSHOT</resource.version>
+        <metrics.version>0.8.1-SNAPSHOT</metrics.version>
     </properties>
 
     <developers>
