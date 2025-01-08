@@ -6,7 +6,6 @@ import net.microfalx.lang.StringUtils;
 import net.microfalx.lang.TimeUtils;
 import net.microfalx.lang.Timestampable;
 
-import java.io.Serial;
 import java.io.Serializable;
 import java.time.temporal.Temporal;
 import java.util.Collection;
@@ -14,7 +13,6 @@ import java.util.Collection;
 @Data
 public class Server implements Identifiable<String>, Serializable, Timestampable {
 
-    @Serial
     private static final long serialVersionUID = -8672559294889358525L;
 
     private String id = StringUtils.NA_STRING;

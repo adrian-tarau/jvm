@@ -3,14 +3,12 @@ package net.microfalx.jvm.model;
 import lombok.Data;
 import org.apache.commons.lang3.mutable.MutableInt;
 
-import java.io.Serial;
 import java.io.Serializable;
 import java.util.*;
 
 @Data
 public class ThreadDump implements Serializable {
 
-    @Serial
     private static final long serialVersionUID = -6503079159406114879L;
 
     private Collection<ThreadInformation> threads = new ArrayList<>();

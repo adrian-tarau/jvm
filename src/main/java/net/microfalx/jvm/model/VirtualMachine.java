@@ -6,7 +6,6 @@ import net.microfalx.jvm.VirtualMachineMBeanServer;
 import net.microfalx.lang.Descriptable;
 import net.microfalx.lang.Nameable;
 
-import java.io.Serial;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -15,7 +14,6 @@ import java.util.Collections;
 @Data
 public class VirtualMachine implements Nameable, Descriptable, Serializable {
 
-    @Serial
     private static final long serialVersionUID = 2876115727942855023L;
 
     private boolean local;

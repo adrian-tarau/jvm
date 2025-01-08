@@ -5,14 +5,12 @@ import lombok.Data;
 import lombok.Getter;
 import lombok.ToString;
 
-import java.io.Serial;
 import java.io.Serializable;
 
 @Data
 @AllArgsConstructor
 public class MemoryPool implements Serializable {
 
-    @Serial
     private static final long serialVersionUID = -5134622121249987615L;
 
     private Type type;

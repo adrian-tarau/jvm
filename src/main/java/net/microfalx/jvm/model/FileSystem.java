@@ -3,7 +3,6 @@ package net.microfalx.jvm.model;
 import lombok.Data;
 import net.microfalx.lang.*;
 
-import java.io.Serial;
 import java.io.Serializable;
 import java.time.temporal.Temporal;
 import java.util.HashSet;
@@ -12,7 +11,6 @@ import java.util.Set;
 @Data
 public class FileSystem implements Identifiable<String>, Nameable, Timestampable, Serializable {
 
-    @Serial
     private static final long serialVersionUID = -6550711624662428549L;
 
     private String id = StringUtils.NA_STRING;

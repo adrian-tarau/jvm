@@ -3,13 +3,11 @@ package net.microfalx.jvm.model;
 import lombok.Data;
 import net.microfalx.lang.Identifiable;
 
-import java.io.Serial;
 import java.io.Serializable;
 
 @Data
 public class ThreadInformation implements Identifiable<Long>, Serializable {
 
-    @Serial
     private static final long serialVersionUID = 4174499425268985048L;
 
     private long id;

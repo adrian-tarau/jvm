@@ -5,14 +5,12 @@ import lombok.Data;
 import lombok.Getter;
 import lombok.ToString;
 
-import java.io.Serial;
 import java.io.Serializable;
 
 @Data
 @AllArgsConstructor
 public class GarbageCollection implements Serializable {
 
-    @Serial
     private static final long serialVersionUID = -3522275180586328029L;
 
     private Type type;
