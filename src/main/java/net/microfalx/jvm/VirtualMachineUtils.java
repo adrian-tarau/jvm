@@ -9,11 +9,12 @@ public class VirtualMachineUtils {
     /**
      * Calculate the usage time in percent based on uptime and actual usage.
      *
-     * @param uptime the uptime in milliseconds
-     * @param usage  the usage in milliseconds
+     * @param startupTime the uptime in milliseconds
+     * @param usage       the usage in milliseconds
      * @return the usage as percentage
      */
-    public static float getAverageUsage(long uptime, long usage) {
+    public static float getAverageUsage(long startupTime, long usage) {
+        long uptime = System.currentTimeMillis() - startupTime;
         return uptime > 0 ? 100 * (float) usage / uptime : 0;
     }
 }

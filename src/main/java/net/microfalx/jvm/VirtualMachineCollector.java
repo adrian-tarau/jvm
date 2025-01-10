@@ -149,7 +149,7 @@ public final class VirtualMachineCollector extends AbstractCollector<VirtualMach
         OperatingSystem operatingSystem = systemInfo.getOperatingSystem();
         OSProcess osProcess = operatingSystem.getProcess(operatingSystem.getProcessId());
         if (osProcess != null) {
-            process.setCpuSystem(osProcess.getKernelTime());
+            process.setCpuSystemTime(osProcess.getKernelTime());
             process.setCpuUserTime(osProcess.getUserTime());
             process.setMemoryVirtual(osProcess.getVirtualSize());
             process.setMemoryResident(osProcess.getResidentSetSize());

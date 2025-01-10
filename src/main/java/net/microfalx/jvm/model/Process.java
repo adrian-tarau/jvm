@@ -1,9 +1,10 @@
 package net.microfalx.jvm.model;
 
 import lombok.Data;
-import net.microfalx.jvm.VirtualMachineUtils;
 
 import java.io.Serializable;
+
+import static net.microfalx.jvm.VirtualMachineUtils.getAverageUsage;
 
 @Data
 public class Process implements Serializable {
@@ -14,7 +15,7 @@ public class Process implements Serializable {
     private float cpuTotal = -1;
     private float cpuSystem = -1;
     private float cpuUser = -1;
-    private float cpuIoWait;
+    private float cpuIoWait = -1;
     private long cpuUserTime;
     private long cpuSystemTime;
     private long cpuIoWaitTime;
@@ -44,7 +45,7 @@ public class Process implements Serializable {
         if (cpuUser >= 0) {
             return cpuUser;
         } else {
-            return VirtualMachineUtils.getAverageUsage(uptime, cpuUserTime);
+            return getAverageUsage(startupTime, cpuUserTime);
         }
     }
 
@@ -52,7 +53,7 @@ public class Process implements Serializable {
         if (cpuSystem >= 0) {
             return cpuSystem;
         } else {
-            return VirtualMachineUtils.getAverageUsage(uptime, cpuSystemTime);
+            return getAverageUsage(uptime, cpuSystemTime);
         }
     }
 
@@ -60,7 +61,7 @@ public class Process implements Serializable {
         if (cpuIoWait >= 0) {
             return cpuIoWait;
         } else {
-            return VirtualMachineUtils.getAverageUsage(uptime, cpuIoWaitTime);
+            return getAverageUsage(uptime, cpuIoWaitTime);
         }
     }
 }

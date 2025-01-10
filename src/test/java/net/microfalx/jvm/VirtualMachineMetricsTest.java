@@ -1,10 +1,12 @@
 package net.microfalx.jvm;
 
 import net.microfalx.lang.ThreadUtils;
+import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import static java.time.Duration.ofSeconds;
+import static net.microfalx.lang.ThreadUtils.sleepMillis;
 import static net.microfalx.lang.ThreadUtils.sleepSeconds;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -42,6 +44,12 @@ class VirtualMachineMetricsTest {
     }
 
     @Test
+    public void averageCpu() {
+        scrapeInLoop();
+        Assertions.assertThat(metrics.getAverageCpu()).isBetween(50f, 200f);
+    }
+
+    @Test
     public void cpu() {
         scrapeInLoop();
         assertTrue(metrics.getStore().getAverage(VirtualMachineMetrics.CPU_TOTAL, ofSeconds(60)).orElse(0) > 0);
@@ -50,9 +58,9 @@ class VirtualMachineMetricsTest {
     }
 
     private void scrapeInLoop() {
-        for (int i = 0; i < 3; i++) {
+        for (int i = 0; i < 10; i++) {
             metrics.scrape();
-            sleepSeconds(1);
+            sleepMillis(200);
         }
         sleepSeconds(1);
     }
