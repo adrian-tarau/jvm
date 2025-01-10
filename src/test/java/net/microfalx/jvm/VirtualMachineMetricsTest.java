@@ -1,5 +1,6 @@
 package net.microfalx.jvm;
 
+import net.microfalx.lang.ThreadUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -14,7 +15,7 @@ class VirtualMachineMetricsTest {
 
     @BeforeEach
     public void setup() {
-        metrics = new VirtualMachineMetrics().useMemory();
+        metrics = (VirtualMachineMetrics) new VirtualMachineMetrics().useMemory();
         metrics.clear();
     }
 
@@ -22,6 +23,13 @@ class VirtualMachineMetricsTest {
     public void scrape() {
         metrics.scrape();
         assertFalse(metrics.getStore().getMetrics().isEmpty());
+    }
+
+    @Test
+    public void start() {
+        metrics.start();
+        ThreadUtils.sleepSeconds(5);
+        metrics.stop();
     }
 
     @Test
@@ -38,6 +46,7 @@ class VirtualMachineMetricsTest {
         scrapeInLoop();
         assertTrue(metrics.getStore().getAverage(VirtualMachineMetrics.CPU_TOTAL, ofSeconds(60)).orElse(0) > 0);
         assertTrue(metrics.getStore().getAverage(VirtualMachineMetrics.CPU_USER, ofSeconds(60)).orElse(0) > 0);
+        assertTrue(metrics.getStore().getAverage(VirtualMachineMetrics.CPU_SYSTEM, ofSeconds(60)).orElse(0) > 0);
     }
 
     private void scrapeInLoop() {
@@ -45,6 +54,7 @@ class VirtualMachineMetricsTest {
             metrics.scrape();
             sleepSeconds(1);
         }
+        sleepSeconds(1);
     }
 
 }

@@ -28,13 +28,4 @@ class VirtualMachineCollectorTest {
         assertNotNull(vm);
     }
 
-    @Test
-    void collectServer() {
-        VirtualMachine vm = collector.execute();
-        for (int i = 0; i < 2; i++) {
-            vm = collector.execute();
-        }
-        assertNotNull(vm);
-    }
-
 }

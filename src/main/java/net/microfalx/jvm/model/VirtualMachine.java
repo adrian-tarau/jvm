@@ -18,7 +18,7 @@ public class VirtualMachine implements Nameable, Descriptable, Serializable {
 
     private boolean local;
 
-    private long pid;
+    private int pid;
 
     private long heapTotalMemory;
     private long heapUsedMemory;
@@ -33,9 +33,7 @@ public class VirtualMachine implements Nameable, Descriptable, Serializable {
     private Collection<GarbageCollection> garbageCollections = Collections.emptyList();
     private RuntimeInformation runtimeInformation;
     private ThreadInformation threadInformation;
-    private Os os;
     private Process process;
-    private Server server;
 
     private int gcRequests;
     private int gcSkipped;
@@ -59,7 +57,7 @@ public class VirtualMachine implements Nameable, Descriptable, Serializable {
      * @return a non-null instance
      */
     public static VirtualMachine get(boolean metadata) {
-        VirtualMachineCollector collector = new VirtualMachineCollector(VirtualMachineMBeanServer.local())
+        VirtualMachineCollector collector = (VirtualMachineCollector) new VirtualMachineCollector(VirtualMachineMBeanServer.local())
                 .setMetadata(metadata);
         return collector.execute();
     }

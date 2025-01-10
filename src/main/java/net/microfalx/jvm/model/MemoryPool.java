@@ -26,6 +26,10 @@ public class MemoryPool implements Serializable {
         return maximum == 0 ? 0 : 100 * (float) used / (float) maximum;
     }
 
+    public long getMaximum() {
+        return maximum > 0 ? maximum : capacity;
+    }
+
     @Getter
     @ToString
     @AllArgsConstructor

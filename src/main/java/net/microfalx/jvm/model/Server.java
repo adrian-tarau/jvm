@@ -1,6 +1,7 @@
 package net.microfalx.jvm.model;
 
 import lombok.Data;
+import net.microfalx.jvm.ServerCollector;
 import net.microfalx.lang.Identifiable;
 import net.microfalx.lang.StringUtils;
 import net.microfalx.lang.TimeUtils;
@@ -18,6 +19,8 @@ public class Server implements Identifiable<String>, Serializable, Timestampable
     private String id = StringUtils.NA_STRING;
     private String hostName = "localhost";
     private long timestamp = System.currentTimeMillis();
+
+    private Os os;
 
     private int cores;
     private int threads;
@@ -68,9 +71,29 @@ public class Server implements Identifiable<String>, Serializable, Timestampable
     private int processSleeping;
     private int processThreads;
     private long uptime;
-    private float score;
 
     private Collection<FileSystem> fileSystems;
+
+    /**
+     * Returns information about the current server.
+     *
+     * @return a non-null instance
+     */
+    public static Server get() {
+        return get(false);
+    }
+
+    /**
+     * Returns information about the current server.
+     *
+     * @param metadata {@code true} to collect only metadata, {@code metadata} to collect full stats
+     * @return a non-null instance
+     */
+    public static Server get(boolean metadata) {
+        ServerCollector collector = (ServerCollector) new ServerCollector()
+                .setMetadata(metadata);
+        return collector.execute();
+    }
 
     @Override
     public Temporal getCreatedAt() {

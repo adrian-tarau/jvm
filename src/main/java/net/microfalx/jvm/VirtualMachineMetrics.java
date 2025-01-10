@@ -1,40 +1,29 @@
 package net.microfalx.jvm;
 
-import net.microfalx.jvm.model.Server;
+import net.microfalx.jvm.model.Process;
 import net.microfalx.jvm.model.VirtualMachine;
 import net.microfalx.metrics.Batch;
 import net.microfalx.metrics.Metric;
-import net.microfalx.metrics.SeriesStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.time.Duration;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.ScheduledExecutorService;
-
-import static java.util.concurrent.TimeUnit.MILLISECONDS;
-import static net.microfalx.lang.ArgumentUtils.requireNonNull;
-import static net.microfalx.lang.ArgumentUtils.requireNotEmpty;
-import static net.microfalx.lang.ExceptionUtils.getRootCauseMessage;
+import java.util.DoubleSummaryStatistics;
+import java.util.LongSummaryStatistics;
 
 /**
  * A singleton class which collects JVM metrics and stores them in the store.
  */
-public class VirtualMachineMetrics {
+public final class VirtualMachineMetrics extends AbstractMetrics<VirtualMachine, VirtualMachineCollector> {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(VirtualMachineMetrics.class);
 
     private static final VirtualMachineMetrics instance = new VirtualMachineMetrics();
+    private final VirtualMachineCollector collector = new VirtualMachineCollector(VirtualMachineMBeanServer.local());
 
-    private ScheduledExecutorService executor;
-    private volatile String name;
-    private volatile boolean memory;
-    private volatile boolean started;
-    private volatile Duration interval = Duration.ofSeconds(5);
-    private volatile Future<?> scrapeTask;
-    private volatile SeriesStore seriesStore;
-    private volatile VirtualMachineCollector collector;
+    private volatile VirtualMachine last = new VirtualMachine();
+    private final DoubleSummaryStatistics cpuStatistics = new DoubleSummaryStatistics();
+    private final LongSummaryStatistics heapStatistics = new LongSummaryStatistics();
+    private final LongSummaryStatistics nonHeapStatistics = new LongSummaryStatistics();
 
     /**
      * Returns the global instance.
@@ -45,147 +34,89 @@ public class VirtualMachineMetrics {
         return instance;
     }
 
-    protected VirtualMachineMetrics() {
-    }
-
     /**
-     * Returns whether the metrics are stored in memory.
+     * Returns the average used CPU since startup.
      *
-     * @return {@code true} in memory, {@code false} otherwise
+     * @return the CPU, between 0 and 100
      */
-    public boolean isMemory() {
-        return memory;
+    public float getAverageCpu() {
+        return (float) cpuStatistics.getAverage();
     }
 
     /**
-     * Changes the metrics store to memory.
+     * Returns the maximum memory size (HEAP and NON-HEAP).
      *
-     * @return self
+     * @return a positive integer
      */
-    public VirtualMachineMetrics useMemory() {
-        checkIfStarted();
-        this.memory = true;
-        return this;
+    public long getMemoryMaximum() {
+        return getHeapMemoryMaximum() + getNonHeapMemoryMaximum();
     }
 
     /**
-     * Changes the metrics store to memory.
+     * Returns the average memory usage.
      *
-     * @param name the name of the store
-     * @return self
+     * @return the value in bytes
      */
-    public VirtualMachineMetrics useDisk(String name) {
-        requireNotEmpty(name);
-        checkIfStarted();
-        this.memory = false;
-        this.name = name;
-        return this;
+    public long getMemoryAverage() {
+        return getHeapMemoryAverage() + getNonHeapMemoryAverage();
     }
 
     /**
-     * Returns the scrape interval.
+     * Returns the maximum size of HEAP memory.
      *
-     * @return a non-null instance
+     * @return the value in bytes
      */
-    public Duration getInterval() {
-        return interval;
+    public long getHeapMemoryMaximum() {
+        return last.getHeapTotalMemory();
     }
 
     /**
-     * Changes the scrape interval.
+     * Returns the average HEAP usage.
      *
-     * @param interval the new interval
-     * @return self
+     * @return the value in bytes
      */
-    public VirtualMachineMetrics setInterval(Duration interval) {
-        requireNonNull(interval);
-        this.interval = interval;
-        createScrapeTask();
-        return this;
+    public long getHeapMemoryAverage() {
+        return (long) heapStatistics.getAverage();
     }
 
     /**
-     * Changes the executor service.
+     * Returns the maximum size of NON_HEAP memory.
      *
-     * @param executor the executor
+     * @return the value in bytes
      */
-    public void setExecutor(ScheduledExecutorService executor) {
-        requireNonNull(executor);
-        this.executor = executor;
+    public long getNonHeapMemoryMaximum() {
+        return last.getNonHeapTotalMemory();
     }
 
     /**
-     * Returns the store for JVM metrics.
+     * Returns the average NON_HEAP usage.
+     *
+     * @return the value in bytes
+     */
+    public long getNonHeapMemoryAverage() {
+        return (long) nonHeapStatistics.getAverage();
+    }
+
+    /**
+     * Returns the last virtual machine collected.
      *
      * @return a non-null instance
      */
-    public synchronized SeriesStore getStore() {
-        if (seriesStore == null) initialize();
-        return seriesStore;
+    public VirtualMachine getLast() {
+        if (last == null) last = VirtualMachine.get();
+        return last;
     }
 
-    /**
-     * Starts data collection.
-     */
-    public synchronized void start() {
-        checkIfStarted();
-        if (executor == null) executor = Executors.newScheduledThreadPool(2);
-        initialize();
-        createScrapeTask();
-        started = true;
-    }
-
-    /**
-     * Stops the data collection.
-     */
-    public synchronized void stop() {
-        started = false;
-    }
-
-    /**
-     * Clear the metrics.
-     */
-    public synchronized void clear() {
-        if (this.seriesStore != null) this.seriesStore.clear();
-    }
-
-    /**
-     * Returns whether the metrics collection is started.
-     *
-     * @return {@code true} if started, {@code false} otherwise
-     */
-    public synchronized boolean isStarted() {
-        return started;
-    }
-
-    /**
-     * Scrapes for new metrics.
-     */
-    public void scrape() {
-        if (seriesStore == null) initialize();
+    @Override
+    protected void collectMetrics(Batch batch) {
         VirtualMachine virtualMachine = collector.execute();
-        collectMetrics(virtualMachine);
+        collectMemory(virtualMachine, batch);
+        collectCpu(virtualMachine, batch);
+        updateStatistics(virtualMachine);
+        this.last = virtualMachine;
     }
 
-    private void checkIfStarted() {
-        if (started) throw new VirtualMachineException("Already started");
-    }
-
-    private synchronized void initialize() {
-        if (seriesStore == null) {
-            seriesStore = memory ? SeriesStore.memory() : SeriesStore.disk(name);
-            collector = new VirtualMachineCollector(VirtualMachineMBeanServer.local());
-        }
-    }
-
-    private void collectMetrics(VirtualMachine vm) {
-        Batch batch = Batch.create(System.currentTimeMillis());
-        collectMemory(vm, batch);
-        collectServer(vm, batch);
-        seriesStore.add(batch);
-    }
-
-    private void collectMemory(VirtualMachine vm, Batch batch) {
+    private static void collectMemory(VirtualMachine vm, Batch batch) {
         batch.add(MEMORY_HEAP_MAX, vm.getHeapTotalMemory());
         batch.add(MEMORY_HEAP_USED, vm.getHeapUsedMemory());
         batch.add(MEMORY_NON_HEAP_MAX, vm.getNonHeapTotalMemory());
@@ -196,55 +127,35 @@ public class VirtualMachineMetrics {
         batch.add(MEMORY_TENURED_USED, vm.getTenuredMemoryPool().getUsed());
     }
 
-    private void collectServer(VirtualMachine vm, Batch batch) {
-        Server server = vm.getServer();
-        batch.add(CPU_TOTAL, server.getCpuTotal());
-        batch.add(CPU_USER, server.getCpuUser());
-        batch.add(CPU_SYSTEM, server.getCpuSystem());
-        batch.add(CPU_IO_WAIT, server.getCpuIoWait());
-        batch.add(CPU_NICE, server.getCpuNice());
+    private static void collectCpu(VirtualMachine vm, Batch batch) {
+        Process process = vm.getProcess();
+        batch.add(CPU_TOTAL, process.getCpuTotal());
+        batch.add(CPU_USER, process.getCpuUser());
+        batch.add(CPU_SYSTEM, process.getCpuSystem());
+        batch.add(CPU_IO_WAIT, process.getCpuIoWait());
     }
 
-    private synchronized void createScrapeTask() {
-        if (scrapeTask != null) scrapeTask.cancel(false);
-        scrapeTask = executor.scheduleAtFixedRate(new CollectorWorker(), 0, interval.toMillis(), MILLISECONDS);
+    private void updateStatistics(VirtualMachine vm) {
+        Process process = vm.getProcess();
+        cpuStatistics.accept(process.getCpuTotal());
+        heapStatistics.accept(vm.getHeapUsedMemory());
+        nonHeapStatistics.accept(vm.getNonHeapUsedMemory());
     }
 
-    private static final String JVM_METRIC_PREFIX = "jvm.";
-    private static final String SERVER_METRIC_PREFIX = "server.";
+    private static final String METRIC_PREFIX = "jvm.";
 
-    public static final Metric MEMORY_HEAP_MAX = Metric.get(JVM_METRIC_PREFIX + "memory.heap.max").withGroup("Heap").withDisplayName("Maximum");
-    public static final Metric MEMORY_HEAP_USED = Metric.get(JVM_METRIC_PREFIX + "memory.heap.used").withGroup("Heap").withDisplayName("Used");
-    public static final Metric MEMORY_NON_HEAP_MAX = Metric.get(JVM_METRIC_PREFIX + "memory.non_heap.max").withGroup("NonHeap").withDisplayName("Maximum");
-    public static final Metric MEMORY_NON_HEAP_USED = Metric.get(JVM_METRIC_PREFIX + "memory.non_heap.used").withGroup("NonHeap").withDisplayName("Used");
-    public static final Metric MEMORY_EDEN_MAX = Metric.get(JVM_METRIC_PREFIX + "memory.eden.max").withGroup("Eden").withDisplayName("Maximum");
-    public static final Metric MEMORY_EDEN_USED = Metric.get(JVM_METRIC_PREFIX + "memory.eden.used").withGroup("Eden").withDisplayName("Used");
-    public static final Metric MEMORY_TENURED_MAX = Metric.get(JVM_METRIC_PREFIX + "memory.tenured.max").withGroup("Tenured").withDisplayName("Maximum");
-    public static final Metric MEMORY_TENURED_USED = Metric.get(JVM_METRIC_PREFIX + "memory.tenured.used").withGroup("Tenured").withDisplayName("Used");
+    public static final Metric MEMORY_HEAP_MAX = Metric.get(METRIC_PREFIX + "memory.heap.max").withGroup("Heap").withDisplayName("Maximum");
+    public static final Metric MEMORY_HEAP_USED = Metric.get(METRIC_PREFIX + "memory.heap.used").withGroup("Heap").withDisplayName("Used");
+    public static final Metric MEMORY_NON_HEAP_MAX = Metric.get(METRIC_PREFIX + "memory.non_heap.max").withGroup("NonHeap").withDisplayName("Maximum");
+    public static final Metric MEMORY_NON_HEAP_USED = Metric.get(METRIC_PREFIX + "memory.non_heap.used").withGroup("NonHeap").withDisplayName("Used");
+    public static final Metric MEMORY_EDEN_MAX = Metric.get(METRIC_PREFIX + "memory.eden.max").withGroup("Eden").withDisplayName("Maximum");
+    public static final Metric MEMORY_EDEN_USED = Metric.get(METRIC_PREFIX + "memory.eden.used").withGroup("Eden").withDisplayName("Used");
+    public static final Metric MEMORY_TENURED_MAX = Metric.get(METRIC_PREFIX + "memory.tenured.max").withGroup("Tenured").withDisplayName("Maximum");
+    public static final Metric MEMORY_TENURED_USED = Metric.get(METRIC_PREFIX + "memory.tenured.used").withGroup("Tenured").withDisplayName("Used");
 
-    public static final Metric CPU_TOTAL = Metric.get(SERVER_METRIC_PREFIX + "cpu.total").withGroup("CPU").withDisplayName("Total");
-    public static final Metric CPU_USER = Metric.get(SERVER_METRIC_PREFIX + "cpu.user").withGroup("CPU").withDisplayName("User");
-    public static final Metric CPU_SYSTEM = Metric.get(SERVER_METRIC_PREFIX + "cpu.system").withGroup("CPU").withDisplayName("System");
-    public static final Metric CPU_IO_WAIT = Metric.get(SERVER_METRIC_PREFIX + "cpu.io_wait").withGroup("CPU").withDisplayName("I/O Wait");
-    public static final Metric CPU_NICE = Metric.get(SERVER_METRIC_PREFIX + "cpu.nice").withGroup("CPU").withDisplayName("Nice");
+    public static final Metric CPU_TOTAL = Metric.get(METRIC_PREFIX + "cpu.total").withGroup("CPU").withDisplayName("Total");
+    public static final Metric CPU_USER = Metric.get(METRIC_PREFIX + "cpu.user").withGroup("CPU").withDisplayName("User");
+    public static final Metric CPU_SYSTEM = Metric.get(METRIC_PREFIX + "cpu.system").withGroup("CPU").withDisplayName("System");
+    public static final Metric CPU_IO_WAIT = Metric.get(METRIC_PREFIX + "cpu.io_wait").withGroup("CPU").withDisplayName("I/O Wait");
 
-
-    class CollectorWorker implements Runnable {
-
-        private final VirtualMachineCollector collector = new VirtualMachineCollector(VirtualMachineMBeanServer.local());
-
-        @Override
-        public void run() {
-            while (started) {
-                try {
-                    VirtualMachine virtualMachine = collector.execute();
-                    collectMetrics(virtualMachine);
-                    break;
-                } catch (Exception e) {
-                    if (e instanceof InterruptedException) break;
-                    LOGGER.warn("Failed to collect VM metrics, root cause: {}", getRootCauseMessage(e));
-                }
-            }
-        }
-    }
 }

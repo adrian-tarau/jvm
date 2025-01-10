@@ -3,29 +3,24 @@ package net.microfalx.jvm;
 import net.microfalx.jvm.model.Process;
 import net.microfalx.jvm.model.*;
 import net.microfalx.lang.ArgumentUtils;
-import net.microfalx.lang.JvmUtils;
 import net.microfalx.lang.StringUtils;
 import net.microfalx.metrics.Timer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import oshi.SystemInfo;
-import oshi.hardware.*;
-import oshi.hardware.CentralProcessor.TickType;
-import oshi.software.os.FileSystem;
-import oshi.software.os.OSFileStore;
 import oshi.software.os.OSProcess;
 import oshi.software.os.OperatingSystem;
 
 import java.lang.management.*;
-import java.util.*;
-import java.util.stream.Collectors;
-
-import static net.microfalx.lang.StringUtils.toIdentifier;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
- * Collects information about a virtual machine.
+ * Collects information about a Java VM (process).
  */
-public class VirtualMachineCollector {
+public final class VirtualMachineCollector extends AbstractCollector<VirtualMachine> {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(VirtualMachineCollector.class);
 
@@ -34,9 +29,6 @@ public class VirtualMachineCollector {
     private final VirtualMachineMBeanServer machineMBeanServer;
     private final SystemInfo systemInfo = new SystemInfo();
 
-    private static volatile long[][] prevTicks;
-    private boolean metadata;
-
     public VirtualMachineCollector(VirtualMachineMBeanServer machineMBeanServer) {
         ArgumentUtils.requireNonNull(machineMBeanServer);
         this.machineMBeanServer = machineMBeanServer;
@@ -44,37 +36,18 @@ public class VirtualMachineCollector {
 
     public VirtualMachine execute() {
         VirtualMachine vm = new VirtualMachine();
-        try (Timer ignored = VirtualMachineUtils.METRICS.startTimer("Collect")) {
+        try (Timer ignored = VirtualMachineUtils.METRICS.startTimer("Collect VM")) {
             vm.setLocal(machineMBeanServer.isLocal());
             collectPid(vm);
             collectProcess(vm);
-            collectServer(vm);
-            collectOs(vm);
             collectMemoryStats(vm);
             collectGarbageCollection(vm);
             collectBufferPools(vm);
             collectRuntimeInformation(vm);
             collectThreadInformation(vm);
-            if (!metadata) collectThreadDumps(vm);
+            if (!isMetadata()) collectThreadDumps(vm);
         }
         return vm;
-    }
-
-    public VirtualMachineCollector setMetadata(boolean metadata) {
-        this.metadata = metadata;
-        return this;
-    }
-
-    public Os getOs() {
-        VirtualMachine vm = new VirtualMachine();
-        collectOs(vm);
-        return vm.getOs();
-    }
-
-    public Server getServer() {
-        VirtualMachine vm = new VirtualMachine();
-        collectServer(vm);
-        return vm.getServer();
     }
 
     public void collectBufferPools(VirtualMachine virtualMachine) {
@@ -117,11 +90,13 @@ public class VirtualMachineCollector {
         RuntimeInformation runtimeInformation = new RuntimeInformation();
         runtimeInformation.setOsName(operatingSystemMXBean.getName());
         runtimeInformation.setOsVersion(operatingSystemMXBean.getVersion());
-
         runtimeInformation.setStartTime(runtimeMXBean.getStartTime());
         runtimeInformation.setUptime(runtimeMXBean.getUptime());
-
         virtualMachine.setName(runtimeMXBean.getVmName() + " " + runtimeMXBean.getVmVersion());
+
+        com.sun.management.OperatingSystemMXBean internalOperatingSystemMXBean = machineMBeanServer.getPlatformMXBean(com.sun.management.OperatingSystemMXBean.class);
+        Process process = virtualMachine.getProcess();
+        process.setCpuTotal((float) internalOperatingSystemMXBean.getProcessCpuLoad() * 100);
 
         try {
             runtimeInformation.setCommittedVirtualMemorySize(machineMBeanServer.getLongAttr(OPERATING_SYSTEM_NAME, "CommittedVirtualMemorySize", 0L));
@@ -153,13 +128,13 @@ public class VirtualMachineCollector {
     private void collectPid(VirtualMachine virtualMachine) {
         virtualMachine.setPid(-1);
         if (machineMBeanServer.isLocal()) {
-            virtualMachine.setPid(ProcessHandle.current().pid());
+            virtualMachine.setPid((int) ProcessHandle.current().pid());
         } else {
             String name = machineMBeanServer.getPlatformMXBean(RuntimeMXBean.class).getName();
             if (name.contains("@")) {
                 String pid = StringUtils.split(name, "@")[0];
                 try {
-                    virtualMachine.setPid(Long.parseLong(pid));
+                    virtualMachine.setPid(Integer.parseInt(pid));
                 } catch (NumberFormatException e) {
                     // ignore
                 }
@@ -167,154 +142,27 @@ public class VirtualMachineCollector {
         }
     }
 
-    private void collectOs(VirtualMachine virtualMachine) {
-        OperatingSystem operatingSystem = systemInfo.getOperatingSystem();
-        Os os = new Os();
-        os.setName(operatingSystem.getFamily());
-        os.setVersion(operatingSystem.getVersionInfo().toString());
-        virtualMachine.setOs(os);
-    }
-
     private void collectProcess(VirtualMachine virtualMachine) {
         if (!machineMBeanServer.isLocal()) return;
         Process process = new Process();
+        process.setPid((int) ProcessHandle.current().pid());
         OperatingSystem operatingSystem = systemInfo.getOperatingSystem();
         OSProcess osProcess = operatingSystem.getProcess(operatingSystem.getProcessId());
         if (osProcess != null) {
+            process.setCpuSystem(osProcess.getKernelTime());
+            process.setCpuUserTime(osProcess.getUserTime());
+            process.setMemoryVirtual(osProcess.getVirtualSize());
+            process.setMemoryResident(osProcess.getResidentSetSize());
             process.setFileDescriptors((int) osProcess.getOpenFiles());
             process.setThreads(osProcess.getThreadCount());
-            process.setThreads(osProcess.getThreadCount());
+            process.setStartupTime(osProcess.getStartTime());
+            process.setUptime(osProcess.getUpTime());
+            process.setBytesRead(osProcess.getBytesRead());
+            process.setBytesWritten(osProcess.getBytesWritten());
+            process.setMinorFaults(osProcess.getMinorFaults());
+            process.setMajorFaults(osProcess.getMajorFaults());
         }
         virtualMachine.setProcess(process);
-    }
-
-    private void collectServer(VirtualMachine virtualMachine) {
-        if (!machineMBeanServer.isLocal()) return;
-        Server server = new Server();
-        server.setHostName(machineMBeanServer.isLocal() ? JvmUtils.getLocalHost().getCanonicalHostName() : machineMBeanServer.getAddress().getHostName());
-        server.setId(toIdentifier(server.getHostName()));
-        extractCpu(server);
-        extractMemory(server);
-        extractNetwork(server);
-        extractDisk(server);
-        extractMisc(server);
-        virtualMachine.setServer(server);
-    }
-
-    private void extractMemory(Server server) {
-        GlobalMemory memory = systemInfo.getHardware().getMemory();
-        server.setMemoryTotal(memory.getTotal());
-        server.setMemoryUsed(memory.getTotal() - memory.getAvailable());
-        server.setMemoryActuallyUsed(server.getMemoryUsed());
-        VirtualMemory virtualMemory = memory.getVirtualMemory();
-        server.setSwapTotal(virtualMemory.getSwapTotal());
-        server.setSwapUsed(virtualMemory.getSwapUsed());
-        server.setSwapPageIn(virtualMemory.getSwapPagesIn());
-        server.setSwapPageOut(virtualMemory.getSwapPagesOut());
-    }
-
-    private void extractDisk(Server server) {
-        long reads = 0;
-        long readBytes = 0;
-        long writeBytes = 0;
-        long writes = 0;
-
-        List<HWDiskStore> diskStores = systemInfo.getHardware().getDiskStores();
-        for (HWDiskStore diskStore : diskStores) {
-            reads += diskStore.getReads();
-            readBytes += diskStore.getReadBytes();
-            writes += diskStore.getWrites();
-            writeBytes += diskStore.getWriteBytes();
-        }
-        server.setIoReads(reads);
-        server.setIoReadBytes(readBytes);
-        server.setIoWrites(writes);
-        server.setIoWriteBytes(writeBytes);
-
-        Collection<net.microfalx.jvm.model.FileSystem> fileSystemInformations = new ArrayList<>();
-        FileSystem fileSystem = systemInfo.getOperatingSystem().getFileSystem();
-        List<OSFileStore> fileStores = fileSystem.getFileStores();
-        long diskTotal = 0;
-        long diskUsed = 0;
-        long totalNodes = 0;
-        long freeNodes = 0;
-        for (OSFileStore fileStore : fileStores) {
-            diskTotal += fileStore.getTotalSpace();
-            diskUsed += fileStore.getTotalSpace() - fileStore.getUsableSpace();
-            totalNodes += fileStore.getTotalInodes();
-            freeNodes += fileStore.getFreeInodes();
-            fileSystemInformations.add(create(fileStore));
-        }
-        server.setFileSystems(fileSystemInformations.stream()
-                .filter(net.microfalx.jvm.model.FileSystem::isDisk)
-                .collect(Collectors.toList()));
-        server.setDiskInodeCount(totalNodes);
-        server.setDiskInodeCountUsed(totalNodes - freeNodes);
-        server.setDiskTotal(diskTotal);
-        server.setDiskUsed(diskUsed);
-    }
-
-    private net.microfalx.jvm.model.FileSystem create(OSFileStore fileStore) {
-        net.microfalx.jvm.model.FileSystem disk = new net.microfalx.jvm.model.FileSystem();
-        disk.setId(fileStore.getUUID());
-        disk.setName(fileStore.getName());
-        disk.setDescription(fileStore.getDescription());
-        disk.setMount(fileStore.getMount());
-        disk.setType(net.microfalx.jvm.model.FileSystem.Type.fromString(fileStore.getType()));
-        disk.setTotalSpace(fileStore.getTotalSpace());
-        disk.setFreeSpace(fileStore.getFreeSpace());
-        disk.setUsableSpace(fileStore.getUsableSpace());
-        disk.setTotalInodes(fileStore.getTotalInodes());
-        disk.setFreeInodes(fileStore.getFreeInodes());
-        return disk;
-    }
-
-    private void extractNetwork(Server server) {
-        long readBytes = 0;
-        long writeBytes = 0;
-        HardwareAbstractionLayer hardware = systemInfo.getHardware();
-        List<NetworkIF> networkIFs = hardware.getNetworkIFs();
-        for (NetworkIF networkIF : networkIFs) {
-            readBytes += networkIF.getBytesRecv();
-            writeBytes += networkIF.getBytesSent();
-        }
-        server.setNetworkReadBytes(readBytes);
-        server.setNetworkWriteBytes(writeBytes);
-    }
-
-    private void extractMisc(Server server) {
-        CentralProcessor processor = systemInfo.getHardware().getProcessor();
-        server.setContextSwitches(processor.getContextSwitches());
-        server.setInterrupts(processor.getInterrupts());
-        server.setUptime((int) systemInfo.getOperatingSystem().getSystemUptime());
-    }
-
-    private void extractCpu(Server server) {
-        HardwareAbstractionLayer hardware = systemInfo.getHardware();
-        CentralProcessor processor = hardware.getProcessor();
-        server.setCores(processor.getPhysicalProcessorCount());
-        server.setThreads(processor.getLogicalProcessorCount());
-        server.setContainerThreads(-1);
-        server.setLoad((float) processor.getSystemLoadAverage(1)[0]);
-        if (metadata) return;
-        if (prevTicks != null) {
-            double[] load = processor.getProcessorCpuLoadBetweenTicks(prevTicks);
-            server.setCpuSystem(getTick(TickType.SYSTEM, load));
-            server.setCpuUser(getTick(TickType.USER, load));
-            server.setCpuNice(getTick(TickType.NICE, load));
-            server.setCpuIoWait(getTick(TickType.IOWAIT, load));
-            server.setCpuIdle(getTick(TickType.IDLE, load));
-            server.setCpuIrq(getTick(TickType.IRQ, load));
-            server.setCpuSoftIrq(getTick(TickType.SOFTIRQ, load));
-            server.setCpuStolen(getTick(TickType.STEAL, load));
-            server.setCpuTotal(server.getCpuUser() + server.getCpuNice() + server.getCpuSystem() + server.getCpuIdle()
-                    + server.getCpuIoWait() + server.getCpuIrq() + server.getCpuSoftIrq() + server.getCpuStolen());
-        }
-        prevTicks = processor.getProcessorCpuLoadTicks();
-    }
-
-    private float getTick(TickType type, double[] load) {
-        return (float) load[type.getIndex()];
     }
 
     private MemoryPool.Type guessMemoryType(MemoryPoolMXBean memoryPoolMXBean) {
