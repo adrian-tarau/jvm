@@ -116,10 +116,11 @@ public abstract class AbstractMetrics<M, C extends AbstractCollector<M>> {
      * Starts data collection.
      */
     public synchronized void start() {
-        checkIfStarted();
-        if (executor == null) executor = getSharedExecutor();
-        initialize();
-        createScrapeTask();
+        if (!started) {
+            if (executor == null) executor = getSharedExecutor();
+            initialize();
+            createScrapeTask();
+        }
         started = true;
     }
 
