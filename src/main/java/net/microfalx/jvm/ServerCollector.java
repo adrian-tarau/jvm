@@ -148,22 +148,26 @@ public final class ServerCollector extends AbstractCollector<Server> {
         server.setLoad((float) processor.getSystemLoadAverage(1)[0]);
         if (isMetadata()) return;
         if (prevTicks != null) {
-            double[] load = processor.getProcessorCpuLoadBetweenTicks(prevTicks);
-            server.setCpuSystem(getTick(CentralProcessor.TickType.SYSTEM, load));
-            server.setCpuUser(getTick(CentralProcessor.TickType.USER, load));
-            server.setCpuNice(getTick(CentralProcessor.TickType.NICE, load));
-            server.setCpuIoWait(getTick(CentralProcessor.TickType.IOWAIT, load));
-            server.setCpuIdle(getTick(CentralProcessor.TickType.IDLE, load));
-            server.setCpuIrq(getTick(CentralProcessor.TickType.IRQ, load));
-            server.setCpuSoftIrq(getTick(CentralProcessor.TickType.SOFTIRQ, load));
-            server.setCpuStolen(getTick(CentralProcessor.TickType.STEAL, load));
-            server.setCpuTotal(server.getCpuUser() + server.getCpuNice() + server.getCpuSystem() + server.getCpuIdle()
-                               + server.getCpuIoWait() + server.getCpuIrq() + server.getCpuSoftIrq() + server.getCpuStolen());
+            try {
+                double[] load = processor.getProcessorCpuLoadBetweenTicks(prevTicks);
+                server.setCpuSystem(getTick(CentralProcessor.TickType.SYSTEM, load));
+                server.setCpuUser(getTick(CentralProcessor.TickType.USER, load));
+                server.setCpuNice(getTick(CentralProcessor.TickType.NICE, load));
+                server.setCpuIoWait(getTick(CentralProcessor.TickType.IOWAIT, load));
+                server.setCpuIdle(getTick(CentralProcessor.TickType.IDLE, load));
+                server.setCpuIrq(getTick(CentralProcessor.TickType.IRQ, load));
+                server.setCpuSoftIrq(getTick(CentralProcessor.TickType.SOFTIRQ, load));
+                server.setCpuStolen(getTick(CentralProcessor.TickType.STEAL, load));
+                server.setCpuTotal(server.getCpuUser() + server.getCpuNice() + server.getCpuSystem() + server.getCpuIdle()
+                                   + server.getCpuIoWait() + server.getCpuIrq() + server.getCpuSoftIrq() + server.getCpuStolen());
+            } catch (IllegalArgumentException e) {
+                // ignore
+            }
         }
         prevTicks = processor.getProcessorCpuLoadTicks();
     }
 
     private float getTick(CentralProcessor.TickType type, double[] load) {
-        return (float) load[type.getIndex()];
+        return type.getIndex() < load.length ? (float) load[type.getIndex()] : 0;
     }
 }
