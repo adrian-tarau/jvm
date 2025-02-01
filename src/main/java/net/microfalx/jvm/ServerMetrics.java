@@ -92,7 +92,7 @@ public final class ServerMetrics extends AbstractMetrics<Server, ServerCollector
 
     private void updateStatistics(Server server) {
         cpuStatistics.accept(server.getCpuTotal());
-        loadStatistics.accept(server.getLoad());
+        loadStatistics.accept(server.getLoad1());
         memoryStatistics.accept(server.getMemoryActuallyUsed());
     }
 
@@ -107,4 +107,8 @@ public final class ServerMetrics extends AbstractMetrics<Server, ServerCollector
     public static final Metric CPU_SYSTEM = Metric.get(METRIC_PREFIX + "cpu.system").withGroup("CPU").withDisplayName("System");
     public static final Metric CPU_IO_WAIT = Metric.get(METRIC_PREFIX + "cpu.io_wait").withGroup("CPU").withDisplayName("I/O Wait");
     public static final Metric CPU_NICE = Metric.get(METRIC_PREFIX + "cpu.nice").withGroup("CPU").withDisplayName("Nice");
+
+    public static final Metric LOAD_1 = Metric.get(METRIC_PREFIX + "load.1").withGroup("Load").withDisplayName("1 Minute");
+    public static final Metric LOAD_5 = Metric.get(METRIC_PREFIX + "load.5").withGroup("Load").withDisplayName("5 Minutes");
+    public static final Metric LOAD_15 = Metric.get(METRIC_PREFIX + "load.15").withGroup("Load").withDisplayName("15 Minutes");
 }

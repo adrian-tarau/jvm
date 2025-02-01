@@ -18,6 +18,9 @@ public class BufferPool implements Serializable {
     private long maximum;
     private long used;
 
+    protected BufferPool() {
+    }
+
     public float getUsedPercent() {
         return maximum == 0 ? 0 : 100 * (float) used / (float) maximum;
     }

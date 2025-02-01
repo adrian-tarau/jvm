@@ -11,8 +11,8 @@ public class ThreadDump implements Serializable {
 
     private static final long serialVersionUID = -6503079159406114879L;
 
-    private Collection<ThreadInformation> threads = new ArrayList<>();
-    private Map<Long, ThreadInformation> threadsById;
+    private final Collection<ThreadInformation> threads = new ArrayList<>();
+    private transient Map<Long, ThreadInformation> threadsById;
 
     int daemonThread;
     int nonDaemonThread;

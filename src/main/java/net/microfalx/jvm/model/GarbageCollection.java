@@ -17,6 +17,9 @@ public class GarbageCollection implements Serializable {
     private long duration;
     private int count;
 
+    protected GarbageCollection() {
+    }
+
     @Getter
     @ToString
     @AllArgsConstructor

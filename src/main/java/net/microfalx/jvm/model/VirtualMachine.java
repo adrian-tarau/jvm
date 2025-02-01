@@ -35,10 +35,6 @@ public class VirtualMachine implements Nameable, Descriptable, Serializable {
     private ThreadInformation threadInformation;
     private Process process;
 
-    private int gcRequests;
-    private int gcSkipped;
-    private int gcExecuted;
-
     private ThreadDump threadDump;
 
     /**

@@ -19,14 +19,9 @@ public class ThreadInformation implements Identifiable<Long>, Serializable {
     private long waitedTime;
     private long waitedCount;
 
-    private int[] activeEvents;
-    private long[] eventCounts;
-    private long[] eventTimes;
-
     private int inNativeCount;
     private int suspendedCount;
-
-    private int[] stateCount;
+    
     private Thread.State state;
 
     public Long getId() {

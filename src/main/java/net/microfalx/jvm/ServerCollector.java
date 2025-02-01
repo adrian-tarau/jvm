@@ -145,7 +145,10 @@ public final class ServerCollector extends AbstractCollector<Server> {
         server.setCores(processor.getPhysicalProcessorCount());
         server.setThreads(processor.getLogicalProcessorCount());
         server.setContainerThreads(-1);
-        server.setLoad((float) processor.getSystemLoadAverage(1)[0]);
+        double[] loads = processor.getSystemLoadAverage(3);
+        server.setLoad1((float) loads[0]);
+        server.setLoad5((float) loads[1]);
+        server.setLoad15((float) loads[2]);
         if (isMetadata()) return;
         if (prevTicks != null) {
             try {

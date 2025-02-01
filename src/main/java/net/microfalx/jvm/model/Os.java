@@ -11,4 +11,5 @@ public class Os implements Serializable {
 
     private String name;
     private String version;
+
 }

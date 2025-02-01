@@ -20,6 +20,9 @@ public class MemoryPool implements Serializable {
     private long used;
     private long committed;
 
+    protected MemoryPool() {
+    }
+
     private final long timestamp = System.currentTimeMillis();
 
     public float getUsedPercent() {

@@ -34,7 +34,9 @@ public class Server implements Identifiable<String>, Serializable, Timestampable
     private float cpuIrq;
     private float cpuSoftIrq;
     private float cpuStolen;
-    private float load;
+    private float load1;
+    private float load5;
+    private float load15;
     private long contextSwitches;
     private long interrupts;
     private long memoryTotal;
