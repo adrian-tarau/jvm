@@ -1,15 +1,18 @@
 package net.microfalx.jvm;
 
+import net.microfalx.jvm.model.Server;
 import net.microfalx.lang.ThreadUtils;
+import net.microfalx.lang.annotation.Ignore;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import static java.time.Duration.ofSeconds;
+import static net.microfalx.lang.FormatterUtils.formatPercent;
 import static net.microfalx.lang.ThreadUtils.sleepSeconds;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-class ServerMetricsTest {
+class ServerMetricsTest extends AbstractMetricsTest {
 
     private ServerMetrics metrics;
 
@@ -48,8 +51,33 @@ class ServerMetricsTest {
         assertTrue(metrics.getStore().getAverage(ServerMetrics.CPU_SYSTEM, ofSeconds(60)).orElse(0) > 0);
     }
 
+    @Test
+    public void cpuUser() {
+        startBusyThreads(4);
+        scrapeInLoop();
+        double avgCpu = metrics.getStore().getAverage(ServerMetrics.CPU_USER, ofSeconds(60)).orElse(0);
+        assertTrue(avgCpu > 400);
+    }
+
+    @Ignore
+    @Test
+    public void realTimeCpu() {
+        startBusyThreads(4);
+        for (; ; ) {
+            metrics.scrape();
+            Server server = metrics.getLast();
+            ThreadUtils.sleepSeconds(1);
+            System.out.println("CPU: System " + formatPercent(server.getCpuSystem())
+                               + ", User " + formatPercent(server.getCpuUser()));
+        }
+    }
+
     private void scrapeInLoop() {
-        for (int i = 0; i < 3; i++) {
+        scrapeInLoop(5);
+    }
+
+    private void scrapeInLoop(int iterations) {
+        for (int i = 0; i < iterations; i++) {
             metrics.scrape();
             sleepSeconds(1);
         }

@@ -2,7 +2,6 @@ package net.microfalx.jvm;
 
 import net.microfalx.jvm.model.Process;
 import net.microfalx.jvm.model.*;
-import net.microfalx.lang.ArgumentUtils;
 import net.microfalx.lang.StringUtils;
 import net.microfalx.metrics.Timer;
 import org.slf4j.Logger;
@@ -12,10 +11,9 @@ import oshi.software.os.OSProcess;
 import oshi.software.os.OperatingSystem;
 
 import java.lang.management.*;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
+
+import static net.microfalx.lang.ArgumentUtils.requireNonNull;
 
 /**
  * Collects information about a Java VM (process).
@@ -29,8 +27,10 @@ public final class VirtualMachineCollector extends AbstractCollector<VirtualMach
     private final VirtualMachineMBeanServer machineMBeanServer;
     private final SystemInfo systemInfo = new SystemInfo();
 
+    private static volatile CpuTime prevCpuTime;
+
     public VirtualMachineCollector(VirtualMachineMBeanServer machineMBeanServer) {
-        ArgumentUtils.requireNonNull(machineMBeanServer);
+        requireNonNull(machineMBeanServer);
         this.machineMBeanServer = machineMBeanServer;
     }
 
@@ -76,7 +76,6 @@ public final class VirtualMachineCollector extends AbstractCollector<VirtualMach
         for (MemoryPoolMXBean memoryPoolMXBean : memoryPoolMXBeans) {
             MemoryUsage memoryUsage = memoryPoolMXBean.getUsage();
             MemoryPool.Type memoryType = guessMemoryType(memoryPoolMXBean);
-
             MemoryPool memoryPool = new MemoryPool(memoryType, memoryUsage.getMax(), memoryUsage.getCommitted(), memoryUsage.getUsed(), memoryUsage.getCommitted());
             memoryPools.add(memoryPool);
         }
@@ -149,8 +148,17 @@ public final class VirtualMachineCollector extends AbstractCollector<VirtualMach
         OperatingSystem operatingSystem = systemInfo.getOperatingSystem();
         OSProcess osProcess = operatingSystem.getProcess(operatingSystem.getProcessId());
         if (osProcess != null) {
-            process.setCpuSystemTime(osProcess.getKernelTime());
-            process.setCpuUserTime(osProcess.getUserTime());
+            CpuTime cpuTime = new CpuTime(osProcess.getKernelTime(), osProcess.getUserTime(), 0);
+            if (prevCpuTime != null) {
+                long duration = cpuTime.time - prevCpuTime.time;
+                process.setCpuSystemTime(cpuTime.system - prevCpuTime.system);
+                process.setCpuUserTime(cpuTime.user - prevCpuTime.user);
+                process.setCpuSystem(VirtualMachineUtils.getUsage(duration, process.getCpuSystemTime()));
+                process.setCpuUser(VirtualMachineUtils.getUsage(duration, process.getCpuUserTime()));
+                process.setCpuIoWait(VirtualMachineUtils.getUsage(duration, process.getCpuIoWaitTime()));
+            }
+            prevCpuTime = cpuTime;
+
             process.setMemoryVirtual(osProcess.getVirtualSize());
             process.setMemoryResident(osProcess.getResidentSetSize());
             process.setFileDescriptors((int) osProcess.getOpenFiles());
@@ -210,6 +218,31 @@ public final class VirtualMachineCollector extends AbstractCollector<VirtualMach
         }
     }
 
+    static class CpuTime {
+
+        private final long time = System.nanoTime();
+
+        private final long system;
+        private final long user;
+        private final long io;
+
+        public CpuTime(long system, long user, long io) {
+            this.user = user;
+            this.system = system;
+            this.io = io;
+        }
+
+        @Override
+        public String toString() {
+            return new StringJoiner(", ", CpuTime.class.getSimpleName() + "[", "]")
+                    .add("time=" + time)
+                    .add("user=" + user)
+                    .add("system=" + system)
+                    .add("io=" + io)
+                    .toString();
+        }
+    }
+
     private static final Set<String> edenGCNames = new HashSet<>();
     private static final Set<String> tenuredGCNames = new HashSet<>();
     private static final Set<String> edenMemoryPools = new HashSet<>();
@@ -229,6 +262,7 @@ public final class VirtualMachineCollector extends AbstractCollector<VirtualMach
         edenGCNames.add("G1 Young Generation");
         edenGCNames.add("ZGC Minor Pauses");
         edenGCNames.add("ZGC Minor Cycles");
+        edenGCNames.add("scavenge");
 
         tenuredGCNames.add("MarkSweepCompact");
         tenuredGCNames.add("ConcurrentMarkSweep");
@@ -236,19 +270,28 @@ public final class VirtualMachineCollector extends AbstractCollector<VirtualMach
         tenuredGCNames.add("G1 Old Generation");
         tenuredGCNames.add("ZGC Major Cycles");
         tenuredGCNames.add("ZGC Major Pauses");
+        tenuredGCNames.add("global");
 
         survivorPools.add("PS Survivor Space");
         survivorPools.add("Par Survivor Space");
         survivorPools.add("G1 Survivor Space");
+        survivorPools.add("nursery-survivor");
+        survivorPools.add("balanced-survivor");
 
         edenMemoryPools.add("PS Eden Space");
         edenMemoryPools.add("Par Eden Space");
         edenMemoryPools.add("G1 Eden Space");
         edenMemoryPools.add("ZGC Young Generation");
+        edenMemoryPools.add("nursery-allocate");
+        edenMemoryPools.add("balanced-eden");
 
         tenureMemoryPools.add("PS Old Gen");
         tenureMemoryPools.add("CMS Old Gen");
         tenureMemoryPools.add("G1 Old Gen");
         tenureMemoryPools.add("ZGC Old Generation");
+        tenureMemoryPools.add("balanced-old");
+        tenureMemoryPools.add("tenured-LOA");
+        tenureMemoryPools.add("tenured-SOA");
+        tenureMemoryPools.add("tenured");
     }
 }

@@ -4,18 +4,16 @@ import lombok.Data;
 
 import java.io.Serializable;
 
-import static net.microfalx.jvm.VirtualMachineUtils.getAverageUsage;
-
 @Data
 public class Process implements Serializable {
 
     private static final long serialVersionUID = -2581339792400294491L;
 
     private int pid;
-    private float cpuTotal = -1;
-    private float cpuSystem = -1;
-    private float cpuUser = -1;
-    private float cpuIoWait = -1;
+    private float cpuTotal;
+    private float cpuSystem;
+    private float cpuUser;
+    private float cpuIoWait;
     private long cpuUserTime;
     private long cpuSystemTime;
     private long cpuIoWaitTime;
@@ -32,6 +30,7 @@ public class Process implements Serializable {
     private String state;
     private long startupTime;
     private long uptime;
+    long window;
 
     public float getCpuTotal() {
         return getCpuUser() + getCpuSystem() + getCpuIoWait();
@@ -41,27 +40,4 @@ public class Process implements Serializable {
         return getCpuUserTime() + getCpuSystemTime() + getCpuIoWaitTime();
     }
 
-    public float getCpuUser() {
-        if (cpuUser >= 0) {
-            return cpuUser;
-        } else {
-            return getAverageUsage(startupTime, cpuUserTime);
-        }
-    }
-
-    public float getCpuSystem() {
-        if (cpuSystem >= 0) {
-            return cpuSystem;
-        } else {
-            return getAverageUsage(uptime, cpuSystemTime);
-        }
-    }
-
-    public float getCpuIoWait() {
-        if (cpuIoWait >= 0) {
-            return cpuIoWait;
-        } else {
-            return getAverageUsage(uptime, cpuIoWaitTime);
-        }
-    }
 }

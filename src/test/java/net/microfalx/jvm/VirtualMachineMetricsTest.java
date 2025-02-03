@@ -1,17 +1,21 @@
 package net.microfalx.jvm;
 
+import net.microfalx.jvm.model.Process;
+import net.microfalx.jvm.model.VirtualMachine;
 import net.microfalx.lang.ThreadUtils;
+import net.microfalx.lang.annotation.Ignore;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import static java.time.Duration.ofSeconds;
+import static net.microfalx.lang.FormatterUtils.formatPercent;
 import static net.microfalx.lang.ThreadUtils.sleepMillis;
 import static net.microfalx.lang.ThreadUtils.sleepSeconds;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-class VirtualMachineMetricsTest {
+class VirtualMachineMetricsTest extends AbstractMetricsTest {
 
     private VirtualMachineMetrics metrics;
 
@@ -46,7 +50,7 @@ class VirtualMachineMetricsTest {
     @Test
     public void averageCpu() {
         scrapeInLoop();
-        Assertions.assertThat(metrics.getAverageCpu()).isBetween(50f, 200f);
+        Assertions.assertThat(metrics.getAverageCpu()).isBetween(10f, 50f);
     }
 
     @Test
@@ -57,8 +61,34 @@ class VirtualMachineMetricsTest {
         assertTrue(metrics.getStore().getAverage(VirtualMachineMetrics.CPU_SYSTEM, ofSeconds(60)).orElse(0) > 0);
     }
 
+    @Test
+    public void cpuUser() {
+        startBusyThreads(4);
+        scrapeInLoop();
+        double avgCpu = metrics.getStore().getAverage(VirtualMachineMetrics.CPU_USER, ofSeconds(60)).orElse(0);
+        Assertions.assertThat(avgCpu).isBetween(200d, 400d);
+    }
+
+    @Ignore
+    @Test
+    public void realTimeCpu() {
+        startBusyThreads(4);
+        for (; ; ) {
+            metrics.scrape();
+            VirtualMachine vm = metrics.getLast();
+            ThreadUtils.sleepSeconds(1);
+            Process process = vm.getProcess();
+            System.out.println("CPU: System " + formatPercent(process.getCpuSystem())
+                               + ", User " + formatPercent(process.getCpuUser()));
+        }
+    }
+
     private void scrapeInLoop() {
-        for (int i = 0; i < 10; i++) {
+        scrapeInLoop(20);
+    }
+
+    private void scrapeInLoop(int iterations) {
+        for (int i = 0; i < iterations; i++) {
             metrics.scrape();
             sleepMillis(200);
         }

@@ -26,6 +26,7 @@ public final class ServerCollector extends AbstractCollector<Server> {
     private final SystemInfo systemInfo = new SystemInfo();
 
     private static volatile long[][] prevTicks;
+    private static volatile long prevTime;
 
     @Override
     public Server execute() {
@@ -150,27 +151,35 @@ public final class ServerCollector extends AbstractCollector<Server> {
         server.setLoad5((float) loads[1]);
         server.setLoad15((float) loads[2]);
         if (isMetadata()) return;
+        long currentTime = System.nanoTime();
+        long[][] ticks = processor.getProcessorCpuLoadTicks();
         if (prevTicks != null) {
+            long duration = currentTime - prevTime;
             try {
-                double[] load = processor.getProcessorCpuLoadBetweenTicks(prevTicks);
-                server.setCpuSystem(getTick(CentralProcessor.TickType.SYSTEM, load));
-                server.setCpuUser(getTick(CentralProcessor.TickType.USER, load));
-                server.setCpuNice(getTick(CentralProcessor.TickType.NICE, load));
-                server.setCpuIoWait(getTick(CentralProcessor.TickType.IOWAIT, load));
-                server.setCpuIdle(getTick(CentralProcessor.TickType.IDLE, load));
-                server.setCpuIrq(getTick(CentralProcessor.TickType.IRQ, load));
-                server.setCpuSoftIrq(getTick(CentralProcessor.TickType.SOFTIRQ, load));
-                server.setCpuStolen(getTick(CentralProcessor.TickType.STEAL, load));
+                server.setCpuSystem(getTick(CentralProcessor.TickType.SYSTEM, duration, ticks, prevTicks));
+                server.setCpuUser(getTick(CentralProcessor.TickType.USER, duration, ticks, prevTicks));
+                server.setCpuNice(getTick(CentralProcessor.TickType.NICE, duration, ticks, prevTicks));
+                server.setCpuIoWait(getTick(CentralProcessor.TickType.IOWAIT, duration, ticks, prevTicks));
+                server.setCpuIdle(getTick(CentralProcessor.TickType.IDLE, duration, ticks, prevTicks));
+                server.setCpuIrq(getTick(CentralProcessor.TickType.IRQ, duration, ticks, prevTicks));
+                server.setCpuSoftIrq(getTick(CentralProcessor.TickType.SOFTIRQ, duration, ticks, prevTicks));
+                server.setCpuStolen(getTick(CentralProcessor.TickType.STEAL, duration, ticks, prevTicks));
                 server.setCpuTotal(server.getCpuUser() + server.getCpuNice() + server.getCpuSystem() + server.getCpuIdle()
                                    + server.getCpuIoWait() + server.getCpuIrq() + server.getCpuSoftIrq() + server.getCpuStolen());
             } catch (IllegalArgumentException e) {
                 // ignore
             }
         }
-        prevTicks = processor.getProcessorCpuLoadTicks();
+        prevTime = currentTime;
+        prevTicks = ticks;
     }
 
-    private float getTick(CentralProcessor.TickType type, double[] load) {
-        return type.getIndex() < load.length ? (float) load[type.getIndex()] : 0;
+    private float getTick(CentralProcessor.TickType type, long duration, long[][] ticks, long[][] prevTicks) {
+        float percent = 0;
+        for (int core = 0; core < prevTicks.length; core++) {
+            long coreDuration = ticks[core][type.getIndex()] - prevTicks[core][type.getIndex()];
+            percent += VirtualMachineUtils.getUsage(duration, coreDuration);
+        }
+        return percent / prevTicks.length;
     }
 }

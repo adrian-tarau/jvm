@@ -72,6 +72,7 @@ public final class ServerMetrics extends AbstractMetrics<Server, ServerCollector
         Server server = collector.execute();
         collectMemory(server, batch);
         collectCpu(server, batch);
+        collectLoad(server, batch);
         updateStatistics(server);
         this.last = server;
     }
@@ -88,6 +89,12 @@ public final class ServerMetrics extends AbstractMetrics<Server, ServerCollector
         batch.add(CPU_SYSTEM, server.getCpuSystem());
         batch.add(CPU_IO_WAIT, server.getCpuIoWait());
         batch.add(CPU_NICE, server.getCpuNice());
+    }
+
+    static void collectLoad(Server server, Batch batch) {
+        batch.add(LOAD_1, server.getLoad1());
+        batch.add(LOAD_5, server.getLoad5());
+        batch.add(LOAD_15, server.getLoad15());
     }
 
     private void updateStatistics(Server server) {

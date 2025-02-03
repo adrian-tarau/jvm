@@ -1,18 +1,25 @@
 package net.microfalx.jvm;
 
+import net.microfalx.lang.ThreadUtils;
+import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-import static net.microfalx.jvm.VirtualMachineUtils.getAverageUsage;
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static net.microfalx.jvm.VirtualMachineUtils.getUsageAtNow;
 
 class VirtualMachineUtilsTest {
 
-    private static final long startTime = System.currentTimeMillis();
+    @Test
+    void underUsed() {
+        long startTime = System.nanoTime();
+        ThreadUtils.sleepMillis(100);
+        Assertions.assertThat(getUsageAtNow(startTime, 10)).isBetween(5f, 15f);
+    }
 
     @Test
-    void assertAverage() {
-        assertEquals(5, getAverageUsage(startTime, 10), 0.01);
-        assertEquals(20, getAverageUsage(startTime, 300), 0.01);
+    void overUsed() {
+        long startTime = System.nanoTime();
+        ThreadUtils.sleepMillis(100);
+        Assertions.assertThat(getUsageAtNow(startTime, 200)).isBetween(150f, 250f);
     }
 
 }
