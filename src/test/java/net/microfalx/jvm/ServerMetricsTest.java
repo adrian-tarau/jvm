@@ -7,8 +7,10 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import static java.time.Duration.ofSeconds;
+import static net.microfalx.jvm.ServerMetrics.*;
 import static net.microfalx.lang.FormatterUtils.formatPercent;
 import static net.microfalx.lang.ThreadUtils.sleepSeconds;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -38,24 +40,30 @@ class ServerMetricsTest extends AbstractMetricsTest {
     @Test
     public void memory() {
         scrapeInLoop();
-        assertTrue(metrics.getStore().getAverage(ServerMetrics.MEMORY_MAX, ofSeconds(60)).orElse(0) > 0);
-        assertTrue(metrics.getStore().getAverage(ServerMetrics.MEMORY_USED, ofSeconds(60)).orElse(0) > 0);
-        assertTrue(metrics.getStore().getAverage(ServerMetrics.MEMORY_ACTUALLY_USED, ofSeconds(60)).orElse(0) > 0);
+        assertTrue(metrics.getStore().getAverage(MEMORY_MAX, ofSeconds(60)).orElse(0) > 0);
+        assertTrue(metrics.getStore().getAverage(MEMORY_USED, ofSeconds(60)).orElse(0) > 0);
+        assertTrue(metrics.getStore().getAverage(MEMORY_ACTUALLY_USED, ofSeconds(60)).orElse(0) > 0);
     }
 
     @Test
     public void cpu() {
         scrapeInLoop();
-        assertTrue(metrics.getStore().getAverage(ServerMetrics.CPU_TOTAL, ofSeconds(60)).orElse(0) > 0);
-        assertTrue(metrics.getStore().getAverage(ServerMetrics.CPU_USER, ofSeconds(60)).orElse(0) > 0);
-        assertTrue(metrics.getStore().getAverage(ServerMetrics.CPU_SYSTEM, ofSeconds(60)).orElse(0) > 0);
+        assertTrue(metrics.getStore().getAverage(CPU_TOTAL, ofSeconds(60)).orElse(0) > 0);
+        assertTrue(metrics.getStore().getAverage(CPU_SYSTEM, ofSeconds(60)).orElse(0) > 0);
+        assertTrue(metrics.getStore().getAverage(CPU_USER, ofSeconds(60)).orElse(0) > 0);
+    }
+
+    @Test
+    public void contextSwitches() {
+        scrapeInLoop();
+        assertThat(metrics.getStore().getAverage(CONTEXT_SWITCHES, ofSeconds(60)).orElse(0)).isBetween(5000d, 200_000d);
     }
 
     @Test
     public void cpuUser() {
         startBusyThreads(4);
         scrapeInLoop();
-        double avgCpu = metrics.getStore().getAverage(ServerMetrics.CPU_USER, ofSeconds(60)).orElse(0);
+        double avgCpu = metrics.getStore().getAverage(CPU_USER, ofSeconds(60)).orElse(0);
         assertTrue(avgCpu > 400);
     }
 

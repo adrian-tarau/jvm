@@ -68,11 +68,18 @@ public final class ServerMetrics extends AbstractMetrics<Server, ServerCollector
     }
 
     @Override
+    protected String getMetricsName() {
+        return "Server";
+    }
+
+    @Override
     protected void collectMetrics(Batch batch) {
         Server server = collector.execute();
         collectMemory(server, batch);
         collectCpu(server, batch);
         collectLoad(server, batch);
+        collectIo(server, batch);
+        collectMisc(server, batch);
         updateStatistics(server);
         this.last = server;
     }
@@ -97,6 +104,20 @@ public final class ServerMetrics extends AbstractMetrics<Server, ServerCollector
         batch.add(LOAD_15, server.getLoad15());
     }
 
+    static void collectIo(Server server, Batch batch) {
+        batch.add(IO_READS, server.getIoReads());
+        batch.add(IO_READ_BYTES, server.getIoReadBytes());
+        batch.add(IO_WRITES, server.getIoWrites());
+        batch.add(IO_WRITE_BYTES, server.getIoWriteBytes());
+    }
+
+    static void collectMisc(Server server, Batch batch) {
+        batch.add(INTERRUPTS, server.getInterrupts());
+        batch.add(CONTEXT_SWITCHES, server.getContextSwitches());
+        batch.add(IO_WRITES, server.getIoWrites());
+        batch.add(IO_WRITE_BYTES, server.getIoWriteBytes());
+    }
+
     private void updateStatistics(Server server) {
         cpuStatistics.accept(server.getCpuTotal());
         loadStatistics.accept(server.getLoad1());
@@ -118,4 +139,12 @@ public final class ServerMetrics extends AbstractMetrics<Server, ServerCollector
     public static final Metric LOAD_1 = Metric.get(METRIC_PREFIX + "load.1").withGroup("Load").withDisplayName("1 Minute");
     public static final Metric LOAD_5 = Metric.get(METRIC_PREFIX + "load.5").withGroup("Load").withDisplayName("5 Minutes");
     public static final Metric LOAD_15 = Metric.get(METRIC_PREFIX + "load.15").withGroup("Load").withDisplayName("15 Minutes");
+
+    public static final Metric IO_READS = Metric.get(METRIC_PREFIX + "io.reads").withGroup("I/O").withDisplayName("Reads").withType(Metric.Type.COUNTER);
+    public static final Metric IO_READ_BYTES = Metric.get(METRIC_PREFIX + "io.read.bytes").withGroup("I/O").withDisplayName("Read Bytes").withType(Metric.Type.COUNTER);
+    public static final Metric IO_WRITES = Metric.get(METRIC_PREFIX + "io.writes").withGroup("I/O").withDisplayName("Writes").withType(Metric.Type.COUNTER);
+    public static final Metric IO_WRITE_BYTES = Metric.get(METRIC_PREFIX + "io.write.bytes").withGroup("I/O").withDisplayName("Write Bytes").withType(Metric.Type.COUNTER);
+
+    public static final Metric INTERRUPTS = Metric.get(METRIC_PREFIX + "interrupts").withGroup("Kernel").withDisplayName("Interrupts").withType(Metric.Type.COUNTER);
+    public static final Metric CONTEXT_SWITCHES = Metric.get(METRIC_PREFIX + "context.switches").withGroup("Kernel").withDisplayName("Context Switches").withType(Metric.Type.COUNTER);
 }

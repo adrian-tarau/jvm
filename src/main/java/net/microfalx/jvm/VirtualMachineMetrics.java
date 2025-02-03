@@ -1,6 +1,7 @@
 package net.microfalx.jvm;
 
 import net.microfalx.jvm.model.Process;
+import net.microfalx.jvm.model.ThreadInformation;
 import net.microfalx.jvm.model.VirtualMachine;
 import net.microfalx.metrics.Batch;
 import net.microfalx.metrics.Metric;
@@ -108,10 +109,17 @@ public final class VirtualMachineMetrics extends AbstractMetrics<VirtualMachine,
     }
 
     @Override
+    protected String getMetricsName() {
+        return "JVM";
+    }
+
+    @Override
     protected void collectMetrics(Batch batch) {
         VirtualMachine virtualMachine = collector.execute();
         collectMemory(virtualMachine, batch);
         collectCpu(virtualMachine, batch);
+        collectThread(virtualMachine, batch);
+        collectIo(virtualMachine, batch);
         updateStatistics(virtualMachine);
         this.last = virtualMachine;
     }
@@ -133,6 +141,19 @@ public final class VirtualMachineMetrics extends AbstractMetrics<VirtualMachine,
         batch.add(CPU_USER, process.getCpuUser());
         batch.add(CPU_SYSTEM, process.getCpuSystem());
         batch.add(CPU_IO_WAIT, process.getCpuIoWait());
+    }
+
+    private static void collectThread(VirtualMachine vm, Batch batch) {
+        ThreadInformation threadInformation = vm.getThreadInformation();
+        batch.add(THREAD, vm.getProcess().getThreads());
+        batch.add(THREAD_DAEMON, threadInformation.getDaemon());
+        batch.add(THREAD_NON_DAEMON, threadInformation.getNonDaemon());
+    }
+
+    private static void collectIo(VirtualMachine vm, Batch batch) {
+        Process process = vm.getProcess();
+        batch.add(IO_READ_BYTES, process.getBytesRead());
+        batch.add(IO_WRITE_BYTES, process.getBytesWritten());
     }
 
     private void updateStatistics(VirtualMachine vm) {
@@ -157,5 +178,12 @@ public final class VirtualMachineMetrics extends AbstractMetrics<VirtualMachine,
     public static final Metric CPU_USER = Metric.get(METRIC_PREFIX + "cpu.user").withGroup("CPU").withDisplayName("User");
     public static final Metric CPU_SYSTEM = Metric.get(METRIC_PREFIX + "cpu.system").withGroup("CPU").withDisplayName("System");
     public static final Metric CPU_IO_WAIT = Metric.get(METRIC_PREFIX + "cpu.io_wait").withGroup("CPU").withDisplayName("I/O Wait");
+
+    public static final Metric IO_READ_BYTES = Metric.get(METRIC_PREFIX + "io.read.bytes").withGroup("I/O").withDisplayName("Read Bytes").withType(Metric.Type.COUNTER);
+    public static final Metric IO_WRITE_BYTES = Metric.get(METRIC_PREFIX + "io.write.bytes").withGroup("I/O").withDisplayName("Write Bytes").withType(Metric.Type.COUNTER);
+
+    public static final Metric THREAD = Metric.get(METRIC_PREFIX + "thread").withGroup("Thread").withDisplayName("OS");
+    public static final Metric THREAD_DAEMON = Metric.get(METRIC_PREFIX + "thread.daemon").withGroup("Thread").withDisplayName("Daemon");
+    public static final Metric THREAD_NON_DAEMON = Metric.get(METRIC_PREFIX + "thread.non_daemon").withGroup("Thread").withDisplayName("Non Daemon");
 
 }

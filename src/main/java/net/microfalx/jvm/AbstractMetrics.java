@@ -1,6 +1,7 @@
 package net.microfalx.jvm;
 
 import net.microfalx.metrics.Batch;
+import net.microfalx.metrics.Metrics;
 import net.microfalx.metrics.SeriesStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,6 +23,8 @@ import static net.microfalx.lang.ExceptionUtils.getRootCauseMessage;
 public abstract class AbstractMetrics<M, C extends AbstractCollector<M>> {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(AbstractMetrics.class);
+
+    protected final static Metrics METRICS = VirtualMachineUtils.METRICS.withGroup("Metrics");
 
     private ScheduledExecutorService executor;
     private volatile String name;
@@ -130,8 +133,8 @@ public abstract class AbstractMetrics<M, C extends AbstractCollector<M>> {
     public void scrape() {
         if (seriesStore == null) initialize();
         Batch batch = Batch.create(currentTimeMillis());
-        collectMetrics(batch);
-        getStore().add(batch);
+        METRICS.time("Scrape " + getMetricsName(), t -> collectMetrics(batch));
+        METRICS.time("Store " + getMetricsName(), t -> getStore().add(batch));
     }
 
     /**
@@ -163,6 +166,15 @@ public abstract class AbstractMetrics<M, C extends AbstractCollector<M>> {
      * @param batch the batch
      */
     protected abstract void collectMetrics(Batch batch);
+
+    /**
+     * Returns a name associated with the metrics.
+     * <p>
+     * Mostly used in logs and for performance monitoring.
+     *
+     * @return a non-null instance
+     */
+    protected abstract String getMetricsName();
 
     private void createScrapeTask() {
         if (scrapeTask != null) scrapeTask.cancel(false);

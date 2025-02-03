@@ -145,7 +145,6 @@ public final class ServerCollector extends AbstractCollector<Server> {
         CentralProcessor processor = hardware.getProcessor();
         server.setCores(processor.getPhysicalProcessorCount());
         server.setThreads(processor.getLogicalProcessorCount());
-        server.setContainerThreads(-1);
         double[] loads = processor.getSystemLoadAverage(3);
         server.setLoad1((float) loads[0]);
         server.setLoad5((float) loads[1]);

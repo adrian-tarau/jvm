@@ -11,6 +11,8 @@ import java.io.Serializable;
 import java.time.temporal.Temporal;
 import java.util.Collection;
 
+import static java.lang.System.currentTimeMillis;
+
 @Data
 public class Server implements Identifiable<String>, Serializable, Timestampable {
 
@@ -18,13 +20,12 @@ public class Server implements Identifiable<String>, Serializable, Timestampable
 
     private String id = StringUtils.NA_STRING;
     private String hostName = "localhost";
-    private long timestamp = System.currentTimeMillis();
+    private long timestamp = currentTimeMillis();
 
     private Os os;
 
     private int cores;
     private int threads;
-    private float containerThreads;
     private float cpuTotal;
     private float cpuSystem;
     private float cpuUser;
@@ -50,8 +51,6 @@ public class Server implements Identifiable<String>, Serializable, Timestampable
     private long swapTotal;
     private long swapUsed;
     private float swapUsedPct;
-    private long swapContainerTotal;
-    private long swapContainerUsed;
     private long swapPageIn;
     private long swapPageOut;
     private long diskTotal;
