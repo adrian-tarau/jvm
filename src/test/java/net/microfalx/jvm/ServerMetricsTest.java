@@ -2,8 +2,8 @@ package net.microfalx.jvm;
 
 import net.microfalx.jvm.model.Server;
 import net.microfalx.lang.ThreadUtils;
-import net.microfalx.lang.annotation.Ignore;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import static java.time.Duration.ofSeconds;
@@ -67,7 +67,7 @@ class ServerMetricsTest extends AbstractMetricsTest {
         assertTrue(avgCpu > 400);
     }
 
-    @Ignore
+    @Disabled
     @Test
     public void realTimeCpu() {
         startBusyThreads(4);

@@ -62,11 +62,18 @@ public class VirtualMachine implements Nameable, Descriptable, Serializable {
         return heapTotalMemory == 0 ? 0 : 100 * ((float) heapUsedMemory / (float) heapTotalMemory);
     }
 
+    public GarbageCollection getGarbageCollection(GarbageCollection.Type type) {
+        for (GarbageCollection garbageCollection : garbageCollections) {
+            if (garbageCollection.getType() == type) return garbageCollection;
+        }
+        return new GarbageCollection(GarbageCollection.Type.UNKNOWN, 0,0);
+    }
+
     public MemoryPool getMemoryPool(MemoryPool.Type type) {
         for (MemoryPool memoryPool : memoryPools) {
             if (memoryPool.getType() == type) return memoryPool;
         }
-        throw new IllegalArgumentException("Unknown memory pool type: " + type);
+        return new MemoryPool(MemoryPool.Type.UNKNOWN, 0,0,0,0);
     }
 
     public float getNonHeapUsedMemoryPercent() {

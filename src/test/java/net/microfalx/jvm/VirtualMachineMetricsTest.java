@@ -3,9 +3,9 @@ package net.microfalx.jvm;
 import net.microfalx.jvm.model.Process;
 import net.microfalx.jvm.model.VirtualMachine;
 import net.microfalx.lang.ThreadUtils;
-import net.microfalx.lang.annotation.Ignore;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import static java.time.Duration.ofSeconds;
@@ -62,6 +62,15 @@ class VirtualMachineMetricsTest extends AbstractMetricsTest {
     }
 
     @Test
+    public void gc() {
+        scrapeInLoop(3);
+        assertTrue(metrics.getStore().getAverage(VirtualMachineMetrics.GC_EDEN_COUNT, ofSeconds(60)).orElse(0) > 0);
+        assertTrue(metrics.getStore().getAverage(VirtualMachineMetrics.GC_EDEN_DURATION, ofSeconds(60)).orElse(0) > 0);
+        assertTrue(metrics.getStore().getAverage(VirtualMachineMetrics.GC_TENURED_COUNT, ofSeconds(60)).orElse(0) > 0);
+        assertTrue(metrics.getStore().getAverage(VirtualMachineMetrics.GC_TENURED_DURATION, ofSeconds(60)).orElse(0) > 0);
+    }
+
+    @Test
     public void cpuUser() {
         startBusyThreads(4);
         scrapeInLoop();
@@ -69,7 +78,7 @@ class VirtualMachineMetricsTest extends AbstractMetricsTest {
         Assertions.assertThat(avgCpu).isBetween(200d, 400d);
     }
 
-    @Ignore
+    @Disabled
     @Test
     public void realTimeCpu() {
         startBusyThreads(4);

@@ -1,5 +1,6 @@
 package net.microfalx.jvm;
 
+import net.microfalx.jvm.model.GarbageCollection;
 import net.microfalx.jvm.model.Process;
 import net.microfalx.jvm.model.ThreadInformation;
 import net.microfalx.jvm.model.VirtualMachine;
@@ -118,6 +119,7 @@ public final class VirtualMachineMetrics extends AbstractMetrics<VirtualMachine,
         VirtualMachine virtualMachine = collector.execute();
         collectMemory(virtualMachine, batch);
         collectCpu(virtualMachine, batch);
+        collectGc(virtualMachine, batch);
         collectThread(virtualMachine, batch);
         collectIo(virtualMachine, batch);
         updateStatistics(virtualMachine);
@@ -150,6 +152,15 @@ public final class VirtualMachineMetrics extends AbstractMetrics<VirtualMachine,
         batch.add(THREAD_NON_DAEMON, threadInformation.getNonDaemon());
     }
 
+    private static void collectGc(VirtualMachine vm, Batch batch) {
+        GarbageCollection eden = vm.getGarbageCollection(GarbageCollection.Type.EDEN);
+        batch.add(GC_EDEN_COUNT, eden.getCount());
+        batch.add(GC_EDEN_DURATION, eden.getDuration());
+        GarbageCollection tenured = vm.getGarbageCollection(GarbageCollection.Type.TENURED);
+        batch.add(GC_TENURED_COUNT, tenured.getCount());
+        batch.add(GC_TENURED_DURATION, tenured.getDuration());
+    }
+
     private static void collectIo(VirtualMachine vm, Batch batch) {
         Process process = vm.getProcess();
         batch.add(IO_READ_BYTES, process.getBytesRead());
@@ -178,6 +189,11 @@ public final class VirtualMachineMetrics extends AbstractMetrics<VirtualMachine,
     public static final Metric CPU_USER = Metric.get(METRIC_PREFIX + "cpu.user").withGroup("CPU").withDisplayName("User");
     public static final Metric CPU_SYSTEM = Metric.get(METRIC_PREFIX + "cpu.system").withGroup("CPU").withDisplayName("System");
     public static final Metric CPU_IO_WAIT = Metric.get(METRIC_PREFIX + "cpu.io_wait").withGroup("CPU").withDisplayName("I/O Wait");
+
+    public static final Metric GC_EDEN_COUNT = Metric.get(METRIC_PREFIX + "gc.eden.count").withGroup("GC").withDisplayName("Eden Count").withType(Metric.Type.COUNTER);
+    public static final Metric GC_EDEN_DURATION = Metric.get(METRIC_PREFIX + "gc.eden.duration").withGroup("GC").withDisplayName("Eden Duration").withType(Metric.Type.COUNTER);
+    public static final Metric GC_TENURED_COUNT = Metric.get(METRIC_PREFIX + "gc.tenured.count").withGroup("GC").withDisplayName("Tenured Count").withType(Metric.Type.COUNTER);
+    public static final Metric GC_TENURED_DURATION = Metric.get(METRIC_PREFIX + "gc.tenured.duration").withGroup("GC").withDisplayName("Tenured Duration").withType(Metric.Type.COUNTER);
 
     public static final Metric IO_READ_BYTES = Metric.get(METRIC_PREFIX + "io.read.bytes").withGroup("I/O").withDisplayName("Read Bytes").withType(Metric.Type.COUNTER);
     public static final Metric IO_WRITE_BYTES = Metric.get(METRIC_PREFIX + "io.write.bytes").withGroup("I/O").withDisplayName("Write Bytes").withType(Metric.Type.COUNTER);
