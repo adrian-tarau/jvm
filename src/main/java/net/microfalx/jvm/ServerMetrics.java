@@ -114,8 +114,6 @@ public final class ServerMetrics extends AbstractMetrics<Server, ServerCollector
     static void collectMisc(Server server, Batch batch) {
         batch.add(INTERRUPTS, server.getInterrupts());
         batch.add(CONTEXT_SWITCHES, server.getContextSwitches());
-        batch.add(IO_WRITES, server.getIoWrites());
-        batch.add(IO_WRITE_BYTES, server.getIoWriteBytes());
     }
 
     private void updateStatistics(Server server) {

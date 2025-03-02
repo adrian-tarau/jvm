@@ -100,9 +100,10 @@ public abstract class AbstractMetrics<M, C extends AbstractCollector<M>> {
      *
      * @param executor the executor
      */
-    public void setExecutor(ScheduledExecutorService executor) {
+    public AbstractMetrics<M, C> setExecutor(ScheduledExecutorService executor) {
         requireNonNull(executor);
         this.executor = executor;
+        return this;
     }
 
     /**
@@ -204,15 +205,20 @@ public abstract class AbstractMetrics<M, C extends AbstractCollector<M>> {
 
         @Override
         public void run() {
-            while (started) {
+            if (started) {
                 try {
                     scrape();
-                    break;
                 } catch (Exception e) {
-                    if (e instanceof InterruptedException) break;
-                    LOGGER.warn("Failed to collect VM metrics, root cause: {}", getRootCauseMessage(e));
+                    if (!(e instanceof InterruptedException)) {
+                        LOGGER.warn("Failed to collect VM metrics, root cause: {}", getRootCauseMessage(e));
+                    }
                 }
             }
+        }
+
+        @Override
+        public String toString() {
+            return AbstractMetrics.this.getMetricsName() + " Scrapper";
         }
     }
 
