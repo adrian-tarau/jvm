@@ -1,5 +1,6 @@
 package net.microfalx.jvm;
 
+import net.microfalx.lang.Nameable;
 import net.microfalx.metrics.Batch;
 import net.microfalx.metrics.Metrics;
 import net.microfalx.metrics.SeriesStore;
@@ -201,7 +202,12 @@ public abstract class AbstractMetrics<M, C extends AbstractCollector<M>> {
         }
     }
 
-    class CollectorWorker implements Runnable {
+    class CollectorWorker implements Runnable, Nameable {
+
+        @Override
+        public String getName() {
+            return AbstractMetrics.this.getMetricsName() + " Scrapper";
+        }
 
         @Override
         public void run() {
@@ -218,7 +224,7 @@ public abstract class AbstractMetrics<M, C extends AbstractCollector<M>> {
 
         @Override
         public String toString() {
-            return AbstractMetrics.this.getMetricsName() + " Scrapper";
+            return getName() + ", interval: " + getInterval();
         }
     }
 
