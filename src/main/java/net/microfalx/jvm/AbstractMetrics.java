@@ -1,9 +1,9 @@
 package net.microfalx.jvm;
 
-import net.microfalx.lang.Nameable;
 import net.microfalx.metrics.Batch;
 import net.microfalx.metrics.Metrics;
 import net.microfalx.metrics.SeriesStore;
+import net.microfalx.threadpool.AbstractRunnable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -17,6 +17,7 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static net.microfalx.lang.ArgumentUtils.requireNonNull;
 import static net.microfalx.lang.ArgumentUtils.requireNotEmpty;
 import static net.microfalx.lang.ExceptionUtils.getRootCauseMessage;
+import static net.microfalx.lang.StringUtils.joinNames;
 
 /**
  * Base class for all metrics collectors.
@@ -202,11 +203,10 @@ public abstract class AbstractMetrics<M, C extends AbstractCollector<M>> {
         }
     }
 
-    class CollectorWorker implements Runnable, Nameable {
+    class CollectorWorker extends AbstractRunnable {
 
-        @Override
-        public String getName() {
-            return AbstractMetrics.this.getMetricsName() + " Scrapper";
+        public CollectorWorker() {
+            setName(joinNames("Scrapper", AbstractMetrics.this.getMetricsName()));
         }
 
         @Override

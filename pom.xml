@@ -61,6 +61,7 @@
         <lang.version>0.8.3-SNAPSHOT</lang.version>
         <resource.version>0.8.3-SNAPSHOT</resource.version>
         <metrics.version>0.8.3-SNAPSHOT</metrics.version>
+        <threadpool.version>0.8.0-SNAPSHOT</threadpool.version>
     </properties>
 
     <developers>
@@ -118,6 +119,12 @@
             <groupId>net.microfalx</groupId>
             <artifactId>metrics</artifactId>
             <version>${metrics.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>net.microfalx</groupId>
+            <artifactId>threadpool</artifactId>
+            <version>${threadpool.version}</version>
         </dependency>
 
         <dependency>
