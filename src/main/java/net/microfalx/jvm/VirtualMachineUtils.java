@@ -2,6 +2,7 @@ package net.microfalx.jvm;
 
 import net.microfalx.lang.TimeUtils;
 import net.microfalx.metrics.Metrics;
+import oshi.software.os.linux.LinuxFileSystem;
 
 public class VirtualMachineUtils {
 
@@ -28,5 +29,10 @@ public class VirtualMachineUtils {
     public static float getUsage(long duration, long usage) {
         usage *= TimeUtils.NANOSECONDS_IN_MILLISECONDS;
         return duration > 0 ? (float) (100 * (double) usage / duration) : 0;
+    }
+
+    static {
+        System.setProperty(LinuxFileSystem.OSHI_LINUX_FS_PATH_EXCLUDES, "/var/lib/kubelet/*,/run/k3s/containerd/*");
+        System.setProperty(LinuxFileSystem.OSHI_LINUX_FS_VOLUME_EXCLUDES, "overlay");
     }
 }
