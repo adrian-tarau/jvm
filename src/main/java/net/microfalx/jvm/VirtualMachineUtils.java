@@ -32,7 +32,6 @@ public class VirtualMachineUtils {
     }
 
     static {
-        System.setProperty(LinuxFileSystem.OSHI_LINUX_FS_PATH_EXCLUDES, "/var/lib/kubelet/*,/run/k3s/containerd/*");
-        System.setProperty(LinuxFileSystem.OSHI_LINUX_FS_VOLUME_EXCLUDES, "overlay");
+        System.setProperty(LinuxFileSystem.OSHI_LINUX_FS_PATH_EXCLUDES, "/var/lib/kubelet/**,/run/docker/**,/run/k3s/**");
     }
 }
