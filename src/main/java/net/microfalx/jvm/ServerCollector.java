@@ -163,7 +163,7 @@ public final class ServerCollector extends AbstractCollector<Server> {
                 server.setCpuIrq(getTick(CentralProcessor.TickType.IRQ, duration, ticks, prevTicks));
                 server.setCpuSoftIrq(getTick(CentralProcessor.TickType.SOFTIRQ, duration, ticks, prevTicks));
                 server.setCpuStolen(getTick(CentralProcessor.TickType.STEAL, duration, ticks, prevTicks));
-                server.setCpuTotal(server.getCpuUser() + server.getCpuNice() + server.getCpuSystem() + server.getCpuIdle()
+                server.setCpuTotal(server.getCpuUser() + server.getCpuNice() + server.getCpuSystem()
                                    + server.getCpuIoWait() + server.getCpuIrq() + server.getCpuSoftIrq() + server.getCpuStolen());
             } catch (IllegalArgumentException e) {
                 // ignore
