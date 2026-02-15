@@ -16,7 +16,7 @@ import static java.lang.System.currentTimeMillis;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static net.microfalx.lang.ArgumentUtils.requireNonNull;
 import static net.microfalx.lang.ArgumentUtils.requireNotEmpty;
-import static net.microfalx.lang.ExceptionUtils.getRootCauseMessage;
+import static net.microfalx.lang.ExceptionUtils.getRootCauseDescription;
 import static net.microfalx.lang.StringUtils.joinNames;
 
 /**
@@ -216,7 +216,7 @@ public abstract class AbstractMetrics<M, C extends AbstractCollector<M>> {
                     scrape();
                 } catch (Exception e) {
                     if (!(e instanceof InterruptedException)) {
-                        LOGGER.warn("Failed to collect VM metrics, root cause: {}", getRootCauseMessage(e));
+                        LOGGER.warn("Failed to collect VM metrics, root cause: {}", getRootCauseDescription(e));
                     }
                 }
             }
