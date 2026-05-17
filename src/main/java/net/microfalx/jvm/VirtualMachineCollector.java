@@ -1,7 +1,7 @@
 package net.microfalx.jvm;
 
-import net.microfalx.jvm.model.Process;
 import net.microfalx.jvm.model.*;
+import net.microfalx.jvm.model.Process;
 import net.microfalx.lang.StringUtils;
 import net.microfalx.metrics.Timer;
 import org.slf4j.Logger;
@@ -160,7 +160,7 @@ public final class VirtualMachineCollector extends AbstractCollector<VirtualMach
             prevCpuTime = cpuTime;
 
             process.setMemoryVirtual(osProcess.getVirtualSize());
-            process.setMemoryResident(osProcess.getResidentSetSize());
+            process.setMemoryResident(osProcess.getResidentMemory());
             process.setFileDescriptors((int) osProcess.getOpenFiles());
             process.setThreads(osProcess.getThreadCount());
             process.setStartupTime(osProcess.getStartTime());

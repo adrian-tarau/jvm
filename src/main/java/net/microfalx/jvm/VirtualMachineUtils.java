@@ -2,7 +2,7 @@ package net.microfalx.jvm;
 
 import net.microfalx.lang.TimeUtils;
 import net.microfalx.metrics.Metrics;
-import oshi.software.os.linux.LinuxFileSystem;
+import oshi.software.common.os.linux.LinuxFileSystem;
 
 public class VirtualMachineUtils {
 
